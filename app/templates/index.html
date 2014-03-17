@@ -1,0 +1,12 @@
+<html>
+  <head>
+  {% if title %}
+    <title>{{title}} - CS3240</title>
+	{% else %}
+	<title>CS3240 Homepage</title>
+	{% endif %}
+  </head>
+  <body>
+      <h1>Hello, {{user.nickname}}!</h1>
+  </body>
+</html>
