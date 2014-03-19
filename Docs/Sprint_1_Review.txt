@@ -1,0 +1,11 @@
+For both technical issues and project management issues, what worked well and what didn't work well? 
+
+	When we were looking at technologies, we read most of the reviews provided. We didn't necessarily see any that jumped out at us as a definite no but we were not specifically attracted to Django or Twisted. It seemed to us that Flask and Watchdog seemed to be simpler according to the reviews and for us was more attractive. The watchdog demo went smoothly while flask was a bit harder but still succesfull. 
+	At the end of Sprint 1, we concluded that we needed to work better on communcation however it was mildly fair due to a week called Spring Break. We didn't initially do a good job a dealing out tasks however and our work on PT was very minimal. We will move to correct these issues in the beginning of this Sprint. 
+
+What are your current top risks?
+	No code at the moment. We only have demo software to work with and we strongly believe we will have to start from scratch. 
+	Lack of Stories. We haven't completely filled out our user stories on PT yet and that will hinder us shortly if we don't have them on there. 
+
+Solutions:
+	This sprint is the real start to our codebase and at the end our goal is to have a working prototype with limited functionality. We also will fill out the user stories and assign them to people which will mitigate most of our issues as listed above. 
