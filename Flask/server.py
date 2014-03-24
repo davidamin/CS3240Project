@@ -34,6 +34,8 @@ app.config.update(dict(
     USERS= {}))
 WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 
+
+
 '''
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -41,8 +43,30 @@ def login():
     password = request.form['password']
     #hold check if server has the user '''
 
+@app.route('/signup/<username>/<passhash>')
+def signup(username, passhash):
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    with db_connect:
+        print username
+        cur = db_connect.cursor()
+        cur.execute("SELECT * FROM users WHERE username = ?", (username,))
+
+        results = cur.fetchall()
+        for i in results:
+            print results
+        if len(results) == 0:
+            logging.debug("No user named : " + username + " found... Creating...")
+            cur.execute("INSERT INTO users (username, passhash) VALUES (?, ?)", (username, passhash))
+            mkdir(username)
+            return "User Account Succesfully Created!"
+        else:
+            logging.debug("User named : " + username + " found. Aborting Signup")
+            return "User Account Already Exists!"
+
+
+
 #Invoked will create a new directory with given username
-@app.route('/mkdir/<username>')
+#@app.route('/mkdir/<username>')
 def mkdir(username):
     """Creates a directory in the user's server-side OneDir directory"""
     logging.debug("Making directory " + username + " in filestore" )
