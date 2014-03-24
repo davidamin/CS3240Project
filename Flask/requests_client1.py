@@ -24,18 +24,20 @@ def process_file(filename):
 
 def main():
     # let's try some things out
-    r = requests.get('http://127.0.0.1:5000/get-json')
-    print r.text
-    print r.json()
-    list = r.json()
-    for i in list:
-        print i
+    # r = requests.get('http://127.0.0.1:5000/get-json')
+    # print r.text
+    # print r.json()
+    # list = r.json()
+    # for i in list:
+    #     print i
 
     # We could do something like the next line, but let's write a function to do this
     # r = requests.get('http://127.0.0.1:5000/get-file-data/somedata.txt')
 
-    process_file("somedata.txt")
-    process_file("badfile")
+    r = requests.get(HOST + "mkdir/btw2cv")
+    print r
+    #process_file("somedata.txt")
+    #process_file("badfile")
 
 
     print "\nClient ending."

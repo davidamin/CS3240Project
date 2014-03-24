@@ -32,7 +32,7 @@ app = Flask(__name__)
 app.config.update(dict(
     DATABASE='database.db',
     USERS= {}))
-WORKING_DIR = '/Users/Marbo/PycharmProjects/Flask/'
+WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 
 '''
 @app.route('/login', methods=['POST', 'GET'])
