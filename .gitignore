@@ -6,3 +6,5 @@
 .idea/misc.xml
 
 .idea/.name
+
+Flask/database.db
