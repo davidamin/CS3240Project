@@ -7,4 +7,5 @@
 
 .idea/.name
 
+Flask/filestore/*
 Flask/database.db
