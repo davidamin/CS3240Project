@@ -3,8 +3,10 @@ import json
 import os
 import logging
 import sqlite3
+import uuid
 import server_functions
 import time
+from datetime import datetime
 """
 Demo of server using Flask.  Can be used by either:
 a) typing URLs into a webbrowser's address box, or
@@ -47,7 +49,6 @@ def login():
 def signup(username, passhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
-        print username
         cur = db_connect.cursor()
         cur.execute("SELECT * FROM users WHERE username = ?", (username,))
 
@@ -58,12 +59,35 @@ def signup(username, passhash):
             logging.debug("No user named : " + username + " found... Creating...")
             cur.execute("INSERT INTO users (username, passhash) VALUES (?, ?)", (username, passhash))
             mkdir(username)
-            return "User Account Succesfully Created!"
+            return "User Account Successfully Created!"
         else:
             logging.debug("User named : " + username + " found. Aborting Signup")
             return "User Account Already Exists!"
 
 
+
+@app.route('/signin/<username>/<passhash>')
+def signin(username, passhash):
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    with db_connect:
+        cur = db_connect.cursor()
+        cur.execute("SELECT passhash FROM users WHERE username = ?", (username,))
+
+        results = cur.fetchall()
+        if len(results) == 0:
+            logging.debug("No user named : " + username + " found...")
+            return json.dumps(("404","BAD"))
+        else:
+            logging.debug("User named : " + username + " found.")
+            stored_hash = results.pop()
+            if stored_hash[0] == passhash:
+                logging.debug("User named : " + username + " Authenticated")
+                session_id = uuid.uuid4().hex
+                temp_date = datetime.now()
+                cur.execute("INSERT INTO sessions (username, session, date) VALUES (?, ?, ?)", (username, session_id, temp_date.strftime('%Y/%m/%d %H:%M:%S')))
+                return json.dumps(("200",session_id))
+            else:
+                return json.dumps(("401","BAD"))
 
 #Invoked will create a new directory with given username
 #@app.route('/mkdir/<username>')

@@ -23,7 +23,7 @@ if __name__ == "__main__":
                         datefmt='%Y-%m-%d %H:%M:%S')
     #the program takes a command line argument, but we could easily change this to be the "Dropbox" folder for our program
     path = sys.argv[1] if len(sys.argv) > 1 else '.'
-    #path = "C:\\Users\\User\\PycharmProjects\\3240Sprint1\\TestDir"
+    path = "/Users/brian/Desktop"
     #the custom event handler watches everything and outputs it all, we need to write our own to take action on changes
     #event_handler = LoggingEventHandler()
     event_handler = CustomHandles()
