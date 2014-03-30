@@ -123,9 +123,9 @@ def upload_file():
     </form>
     '''
 #use this to send a file from user
-@app.route('/send', methods=['GET','POST'])
-def index():
-    userpath = '/Users/Marbo/PycharmProjects/CS3240Project/Flask/testing.txt'
+@app.route('/send/<filename>', methods=['GET','POST'])
+def send(filename):
+    userpath = os.path.join(WORKING_DIR,filename)
     return send_file(userpath, as_attachment=True)
 # Need to figure out how to add file
 #Invoked will go directory with given username and add file
