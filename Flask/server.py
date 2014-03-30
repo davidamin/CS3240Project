@@ -4,9 +4,11 @@ import os
 import logging
 import sqlite3
 import uuid
+
 import server_functions
 import time
 from datetime import datetime
+from werkzeug.utils import secure_filename
 """
 Demo of server using Flask.  Can be used by either:
 a) typing URLs into a webbrowser's address box, or
@@ -31,19 +33,14 @@ create the subdirectory, and put a file or files in there.
 
 app = Flask(__name__)
 
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 app.config.update(dict(
     DATABASE='database.db',
     USERS= {}))
-WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
+#WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
+WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
+CURRENT_USER=''
 
-
-
-'''
-@app.route('/login', methods=['POST', 'GET'])
-def login():
-    username = request.form['username']
-    password = request.form['password']
-    #hold check if server has the user '''
 
 @app.route('/signup/<username>/<passhash>')
 def signup(username, passhash):
@@ -65,7 +62,6 @@ def signup(username, passhash):
             return "User Account Already Exists!"
 
 
-
 @app.route('/signin/<username>/<passhash>')
 def signin(username, passhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -80,10 +76,14 @@ def signin(username, passhash):
         else:
             logging.debug("User named : " + username + " found.")
             stored_hash = results.pop()
+            CURRENT_USER = username
+            print(CURRENT_USER)
             if stored_hash[0] == passhash:
                 logging.debug("User named : " + username + " Authenticated")
                 session_id = uuid.uuid4().hex
                 temp_date = datetime.now()
+
+
                 cur.execute("INSERT INTO sessions (username, session, date) VALUES (?, ?, ?)", (username, session_id, temp_date.strftime('%Y/%m/%d %H:%M:%S')))
                 return json.dumps(("200",session_id))
             else:
@@ -94,13 +94,39 @@ def signin(username, passhash):
 def mkdir(username):
     """Creates a directory in the user's server-side OneDir directory"""
     logging.debug("Making directory " + username + " in filestore" )
-    full_filename = os.path.join(WORKING_DIR, 'filestore', username)
+    full_filename = os.path.join(WORKING_DIR, username)
     if os.path.exists(full_filename):
         return username + " already exist!"
     else:
         os.mkdir(full_filename)
         return "A file has been made for user " + username
 
+#upload file into user account
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        print(CURRENT_USER + "user")
+        file = request.files['file']
+        filename = secure_filename(file.filename)
+        userpath = os.path.join(WORKING_DIR,CURRENT_USER)
+        print(userpath)
+        file.save(os.path.join(userpath, filename))
+        return redirect(url_for('uploaded_file',
+                                    filename=filename))
+    return '''
+    <!doctype html>
+    <title>Upload new File</title>
+    <h1>Upload new File</h1>
+    <form action="" method=post enctype=multipart/form-data>
+      <p><input type=file name=file>
+         <input type=submit value=Upload>
+    </form>
+    '''
+#use this to send a file from user
+@app.route('/send', methods=['GET','POST'])
+def index():
+    userpath = '/Users/Marbo/PycharmProjects/CS3240Project/Flask/testing.txt'
+    return send_file(userpath, as_attachment=True)
 # Need to figure out how to add file
 #Invoked will go directory with given username and add file
 @app.route('/user-add-file/<username>/<filename>')
@@ -118,7 +144,7 @@ def user_add_file(username, filename):
 def view_files(username):
     """Returns the size and number of files stored in a directory on the server"""
     onlyfiles = []
-    full_filename = os.path.join(WORKING_DIR, 'filestore', username)
+    full_filename = os.path.join(WORKING_DIR, username)
     for f in os.listdir(full_filename):
         onlyfiles.append(f)
         logging.debug(onlyfiles)
