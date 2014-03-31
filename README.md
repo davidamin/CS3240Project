@@ -12,3 +12,6 @@ Now for sessions, I made it as easy as possible in order to do everything automa
 So I didn't have time to change all of your functions on server code to reflect that. So can someone do it? If not I can take care of it later. The code shouldn't be too hard to understand, its still pretty small.
 
 ~BTW
+
+###Marbo:
+Added two functions on serve side, upload function to upload a file through server and a send file function to be able to send a file from server to be downloaded.
