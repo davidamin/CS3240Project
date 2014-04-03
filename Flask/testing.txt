@@ -1,1 +1,0 @@
-You have retrieved the testing.txt file!

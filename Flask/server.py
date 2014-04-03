@@ -37,10 +37,21 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 app.config.update(dict(
     DATABASE='database.db',
     USERS= {}))
-#WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
-WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
-CURRENT_USER=''
+WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
+#WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
 
+def authenticate(sessionhash):
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    with db_connect:
+        cur = db_connect.cursor()
+        cur.execute("SELECT username FROM sessions WHERE session = ?", (sessionhash,))
+        results = cur.fetchall()
+        if len(results) == 0:
+            logging.debug("No session hash matched...")
+            return (False, "")
+        else:
+            stored_username = results.pop()
+            return (True, stored_username[0])
 
 @app.route('/signup/<username>/<passhash>')
 def signup(username, passhash):
@@ -54,12 +65,12 @@ def signup(username, passhash):
             print results
         if len(results) == 0:
             logging.debug("No user named : " + username + " found... Creating...")
-            cur.execute("INSERT INTO users (username, passhash) VALUES (?, ?)", (username, passhash))
+            cur.execute("INSERT INTO users (username, passhash, user_role) VALUES (?, ?, ?)", (username, passhash, 0))
             mkdir(username)
-            return "User Account Successfully Created!"
+            return json.dumps(("200", "GOOD"))
         else:
             logging.debug("User named : " + username + " found. Aborting Signup")
-            return "User Account Already Exists!"
+            return json.dumps(("404", "BAD"))
 
 
 @app.route('/signin/<username>/<passhash>')
@@ -102,44 +113,75 @@ def mkdir(username):
         return "A file has been made for user " + username
 
 #upload file into user account
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_file():
+@app.route('/upload-file/<sessionhash>/<path:filename>', methods=['GET', 'POST'])
+def upload_file(sessionhash,filename):
     if request.method == 'POST':
-        print(CURRENT_USER + "user")
-        file = request.files['file']
-        filename = secure_filename(file.filename)
-        userpath = os.path.join(WORKING_DIR,CURRENT_USER)
-        print(userpath)
-        file.save(os.path.join(userpath, filename))
-        return redirect(url_for('uploaded_file',
-                                    filename=filename))
-    return '''
-    <!doctype html>
-    <title>Upload new File</title>
-    <h1>Upload new File</h1>
-    <form action="" method=post enctype=multipart/form-data>
-      <p><input type=file name=file>
-         <input type=submit value=Upload>
-    </form>
-    '''
-#use this to send a file from user
-@app.route('/send/<filename>', methods=['GET','POST'])
-def send(filename):
-    userpath = os.path.join(WORKING_DIR,filename)
-    return send_file(userpath, as_attachment=True)
-# Need to figure out how to add file
-#Invoked will go directory with given username and add file
-@app.route('/user-add-file/<username>/<filename>')
-def user_add_file(username, filename):
-    """Creates a directory in the user's server-side OneDir directory"""
-    full_filename = os.path.join(WORKING_DIR, 'filestore', username)
-    if os.path.exists(full_filename):
-        file_add =os.path.join(full_filename,filename)
+        logging.debug("New File: " + filename + " .... Processing")
 
-        return username + " exist! Adding file: " + filename + " to user directory"
+        user = authenticate(sessionhash)
+        if (user[0]):
+            file = request.files['file']
+            userpath = os.path.join(WORKING_DIR,"filestore",user[1])
+            file.save(os.path.join(userpath, filename))
+            logging.info("File: " + os.path.join(userpath, filename) + " ... Created")
+            return json.dumps(("200", "OK"))
+        else:
+            return json.dumps(("400", "BAD"))
 
+#upload file into user account
+@app.route('/new-dir/<sessionhash>/<path:filepath>', methods=['GET', 'POST'])
+def new_dir(sessionhash,filepath):
+    logging.debug("New Directory: " + filepath + " .... Processing")
+    user = authenticate(sessionhash)
+    if (user[0]):
+        userpath = os.path.join(WORKING_DIR,"filestore",user[1])
+        #file.save(os.path.join(userpath, filename))
+        if not os.path.exists(userpath+"/"+filepath):
+            os.makedirs(userpath+"/"+filepath)
+            logging.info("New Directory: " + filepath + " Created for user: " + user[1])
+        return json.dumps(("200", "OK"))
     else:
-        return "This user does not exist you cannot add file"
+        return json.dumps(("400", "BAD"))
+
+@app.route('/delete-file/<sessionhash>/<path:file>')
+def delete_file(sessionhash,file):
+    user = authenticate(sessionhash)
+    if (user[0]):
+        #filename = secure_filename(file)
+        userpath = os.path.join(WORKING_DIR,"filestore",user[1],file)
+        if os.path.exists(userpath):
+            logging.debug("File: " + userpath + " Exists... Deleting")
+            os.remove(userpath)
+            return json.dumps(("200", "OK"))
+        else:
+            logging.debug("File: " + userpath + " Does not Exist.... Nothing to Delete")
+            return json.dumps(("201", "OK"))
+    else:
+        logging.error("User does not exist")
+        return json.dumps(("400"), "BAD")
+
+@app.route('/delete-dir/<sessionhash>/<path:filepath>')
+def delete_dir(sessionhash,filepath):
+    user = authenticate(sessionhash)
+    if (user[0]):
+        userpath = os.path.join(WORKING_DIR,"filestore",user[1],filepath)
+        if os.path.exists(userpath):
+            logging.debug("File: " + userpath + " Exists... Deleting")
+            os.removedirs(userpath)
+            return json.dumps(("200", "OK"))
+        else:
+            logging.debug("Dir: " + userpath + " Does not Exist.... Nothing to Delete")
+            return json.dumps(("201", "OK"))
+    else:
+        logging.error("User does not exist")
+        return json.dumps(("400"), "BAD")
+
+# #use this to send a file from user
+# @app.route('/send/<filename>', methods=['GET','POST'])
+# def send(filename):
+#     userpath = os.path.join(WORKING_DIR,filename)
+#     return send_file(userpath, as_attachment=True)
+
 @app.route('/view_files/<username>')
 def view_files(username):
     """Returns the size and number of files stored in a directory on the server"""
@@ -166,41 +208,36 @@ def get_file_data(filename):
         ret_value = { "result" : 0, "size" : file_size, "value" : snippet}
     return json.dumps(ret_value)
 
-# Invoked when you access: http://127.0.0.1:5000/replace-file-data/newdata.txt/data   (makes changes to file:newdata.txt by putting info in data
-@app.route('/replace-file-data/<filename>/<data>')
-def replace_data( filename, data):
-    full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
-    logging.debug("Replacing file data")
-    with open( full_filename, "w") as f:
-        f.write(data)
-    return "server wrote data to: " + filename
-
-
-#Invoked when you access: http://127.0.0.1:5000/append-data-file/newdata.txt/data  to append data into existing files
-@app.route('/append-data-file/<filename>/<data>')
-def append_file( filename, data):
-    full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
-    with open( full_filename, "a") as f:
-        f.write(data)
-    return "server appended data to: " + filename
+# # Invoked when you access: http://127.0.0.1:5000/replace-file-data/newdata.txt/data   (makes changes to file:newdata.txt by putting info in data
+# @app.route('/replace-file-data/<filename>/<data>')
+# def replace_data( filename, data):
+#     full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
+#     logging.debug("Replacing file data")
+#     with open( full_filename, "w") as f:
+#         f.write(data)
+#     return "server wrote data to: " + filename
+#
+#
+# #Invoked when you access: http://127.0.0.1:5000/append-data-file/newdata.txt/data  to append data into existing files
+# @app.route('/append-data-file/<filename>/<data>')
+# def append_file( filename, data):
+#     full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
+#     with open( full_filename, "a") as f:
+#         f.write(data)
+#     return "server appended data to: " + filename
 
 #Invoked when you access: http://127.0.0.1:5000/delete-file/newdata.txt to delete newdata.txt file
 # only allows deletion of file but not directories
-@app.route('/delete-file/<filename>')
-def delete_file( filename):
-    full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
-    os.remove(full_filename)
 
-    return "file deleted: " + filename
 
-#Invoked when you access: http://127.0.0.1:5000/delete-file/newdata.txt to delete newdata.txt file
-@app.route('/rename-file/<filename>/<newfilename>')
-def rename_file( filename , newfilename):
-    full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
-    new_filename = os.path.join(WORKING_DIR, 'filestore', newfilename)
-    os.rename(full_filename, new_filename)
-
-    return "file renamed: " + filename +" to " + newfilename
+# #Invoked when you access: http://127.0.0.1:5000/delete-file/newdata.txt to delete newdata.txt file
+# @app.route('/rename-file/<filename>/<newfilename>')
+# def rename_file( filename , newfilename):
+#     full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
+#     new_filename = os.path.join(WORKING_DIR, 'filestore', newfilename)
+#     os.rename(full_filename, new_filename)
+#
+#     return "file renamed: " + filename +" to " + newfilename
 
 
 
