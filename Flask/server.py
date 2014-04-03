@@ -37,6 +37,7 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 app.config.update(dict(
     DATABASE='database.db',
     USERS= {}))
+
 WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 #WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
 
@@ -239,7 +240,31 @@ def get_file_data(filename):
 #
 #     return "file renamed: " + filename +" to " + newfilename
 
+@app.route('/view_users')
+def view_report():
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    with db_connect:
+        cur = db_connect.cursor()
+        cur.execute("SELECT username FROM users ", ())
+        user_list = []
+        results = cur.fetchall()
+        for uniresults in results:
+            unistr = uniresults[0]
+            user_list.append(unistr.encode('ascii','ignore'))
+        #f = open('AdminReport', 'w')
+        #json.dump(results,f)
+    result_html = '''
+    <!doctype html>
+    <title>Users</title>
+    <h1>User List</h1>
+    <body>
+    '''
+    for formatted_result in user_list:
+        result_html += formatted_result
+        result_html += "<br>"
 
+    result_html += "</body>"
+    return result_html
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
