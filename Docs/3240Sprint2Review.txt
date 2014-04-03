@@ -1,0 +1,19 @@
+CS3240 Sprint 2 Review
+
+What did we get done?
+Server can run and serve a port. Can handle some requests, although not all fully functional
+Client side can create account, and Watchdog can look for any changes/additions/deletions, as well as for subdirectories
+
+Risks:
+We are struggling with upload, it needs to be done for other components to work
+Watchdog hasn't actually done anything with the server yet, it only provides notifications
+Differing workloads/schedules make it hard to meet/get work done
+
+Risk Management:
+We're going to prioritize the most essential tasks, so that we don't get caught up in development later
+
+Project Management:
+The partner system we've developed has been working, but going forward we might not be able to divide labor so easily
+We should start to work more cohesively in the future as the tasks are no longer easy to split into teams
+
+Planning:
