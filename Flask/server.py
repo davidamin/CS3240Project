@@ -38,7 +38,7 @@ app.config.update(dict(
     DATABASE='database.db',
     USERS= {}))
 
-WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
+WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
 #WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
 
 def authenticate(sessionhash):
@@ -100,6 +100,32 @@ def signin(username, passhash):
                 return json.dumps(("200",session_id))
             else:
                 return json.dumps(("401","BAD"))
+
+@app.route('/changepass/<username>/<passhash>')
+def signin(username, passhash):
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    with db_connect:
+        cur = db_connect.cursor()
+        cur.execute("SELECT * FROM users WHERE username = ?", (username,))
+
+        results = cur.fetchall()
+        if len(results) == 0:
+            logging.debug("No user named : " + username + " found...")
+            return json.dumps(("404","BAD"))
+        else:
+            cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, username))
+            logging.debug("User named : " + username + " found.")
+            #stored_hash = results.pop()
+            #CURRENT_USER = username
+            #print(CURRENT_USER)
+            #if stored_hash[0] == passhash:
+            #    logging.debug("User named : " + username + " Authenticated")
+            session_id = uuid.uuid4().hex
+            temp_date = datetime.now()
+
+
+            cur.execute("INSERT INTO sessions (username, session, date) VALUES (?, ?, ?)", (username, session_id, temp_date.strftime('%Y/%m/%d %H:%M:%S')))
+            return json.dumps(("200",session_id))
 
 #Invoked will create a new directory with given username
 #@app.route('/mkdir/<username>')

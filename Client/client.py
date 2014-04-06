@@ -138,6 +138,20 @@ def sign_in():
         print "ERROR: Username was not found! Please try again!"
         init()
 
+def change_pass():
+    print "To change password, please input"
+    username = raw_input('Username: ')
+    password = hashlib.sha256(raw_input('New Password: ')).hexdigest()
+    r = requests.get(HOST + "changepass/" + username + "/" + password)
+    result = yaml.load(r.text)
+
+    if result[0] == "200":
+        print "Password successfully changed!"
+        init()
+    else:
+        print "ERROR: Username not found! Please try again!"
+        init()
+
 def runtime():
     print "Setup Complete: Intializing OneDir! Enjoy your day!"
     event_handler = OneDirFileHandles()
@@ -164,9 +178,12 @@ def init():
     print "Welcome to OneDir! Please Select from the following options!"
     print "0 : Create New Account!"
     print "1 : Sign into Account!"
+    print "2 : Change my password!"
     selection = int(raw_input("Option Selected: "))
     if selection == 0:
         new_user()
+    elif selection == 2:
+        change_pass()
     else:
         sign_in()
 
