@@ -152,6 +152,23 @@ def change_pass():
         print "ERROR: Username not found! Please try again!"
         init()
 
+def user_stat():
+    print "To see stats of user, please input"
+    username = raw_input('Username: ')
+    r = requests.get(HOST+"files-stat/"+username)
+    result = yaml.load(r.text)
+
+    if result [0] == "400":
+        logging.debug("Unsucessful retrieval of " + username + " stats")
+        print "Unsuccesful retrieval of " + username + " stats"
+    else:
+        logging.debug("Succesfully retrieved " + username + " stats")
+        print "Succesfully retrieved " + username + " stats"
+
+
+
+
+
 def runtime():
     print "Setup Complete: Intializing OneDir! Enjoy your day!"
     event_handler = OneDirFileHandles()

@@ -100,7 +100,7 @@ def signin(username, passhash):
                 return json.dumps(("200",session_id))
             else:
                 return json.dumps(("401","BAD"))
-
+'''
 @app.route('/changepass/<username>/<passhash>')
 def signin(username, passhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -126,7 +126,7 @@ def signin(username, passhash):
 
             cur.execute("INSERT INTO sessions (username, session, date) VALUES (?, ?, ?)", (username, session_id, temp_date.strftime('%Y/%m/%d %H:%M:%S')))
             return json.dumps(("200",session_id))
-
+'''
 #Invoked will create a new directory with given username
 #@app.route('/mkdir/<username>')
 def mkdir(username):
@@ -209,22 +209,36 @@ def delete_dir(sessionhash,filepath):
 #     userpath = os.path.join(WORKING_DIR,filename)
 #     return send_file(userpath, as_attachment=True)
 
-@app.route('/view_files/<username>')
-def view_files(username):
+@app.route('/files-stat/<admin>/<username>')
+def file_stat(username):
     """Returns the size and number of files stored in a directory on the server"""
-    onlyfiles = []
-    full_filename = os.path.join(WORKING_DIR, username)
-    for f in os.listdir(full_filename):
-        onlyfiles.append(f)
-        logging.debug(onlyfiles)
-    return "Here are the files of the user " + username + ": " + onlyfiles.__str__()
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    with db_connect:
+        cur = db_connect.cursor()
+        cur.execute("SELECT * FROM users WHERE username = ?", (username,))
+        results = cur.fetchall()
+        if len(results) == 0:
+            logging.debug("No user named : " + username + " found...")
+            return json.dumps(("400","User does not exist"))
+        else:
+            files = {}
+            full_filename = os.path.join(WORKING_DIR, username)
+            count = 0
+            memory = 0
+            for f in os.listdir(full_filename):
+                files[f.__str__()]= f.__sizeof__()
+
+                logging.debug(files)
+                count = count + 1
+                memory =memory + f.__sizeof__()
+            return username + " has " + count.__str__()  + " files with total memory of "+ memory.__str__() + ": " + files.__str__()
 
 
 # Invoked when you access: http://127.0.0.1:5000/get-file-data/somedata.txt
 @app.route('/get-file-data/<filename>')
 def get_file_data(filename):
     logging.debug("entering get_file_data")
-    full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
+    full_filename = os.path.join(WORKING_DIR, filename)
     if not os.path.exists(full_filename):
         logging.warn("file does not exist on server: " + full_filename)
         ret_value = { "result" : -1, "msg" : "file does not exist"}
@@ -234,6 +248,7 @@ def get_file_data(filename):
         file_size = os.path.getsize(full_filename)
         ret_value = { "result" : 0, "size" : file_size, "value" : snippet}
     return json.dumps(ret_value)
+
 
 # # Invoked when you access: http://127.0.0.1:5000/replace-file-data/newdata.txt/data   (makes changes to file:newdata.txt by putting info in data
 # @app.route('/replace-file-data/<filename>/<data>')
