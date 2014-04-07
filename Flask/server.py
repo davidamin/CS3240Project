@@ -209,8 +209,8 @@ def delete_dir(sessionhash,filepath):
 #     userpath = os.path.join(WORKING_DIR,filename)
 #     return send_file(userpath, as_attachment=True)
 
-@app.route('/files-stat/<admin>/<username>')
-def file_stat(username):
+@app.route('/user-stat/<username>')
+def user_stat(username):
     """Returns the size and number of files stored in a directory on the server"""
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:

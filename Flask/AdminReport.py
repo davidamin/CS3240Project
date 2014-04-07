@@ -2,6 +2,7 @@ __author__ = 'User'
 import sqlite3
 import json
 WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
+#WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
 db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
 with db_connect:
     cur = db_connect.cursor()

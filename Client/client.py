@@ -155,7 +155,7 @@ def change_pass():
 def user_stat():
     print "To see stats of user, please input"
     username = raw_input('Username: ')
-    r = requests.get(HOST+"files-stat/"+username)
+    r = requests.get(HOST+"user-stat/"+username)
     result = yaml.load(r.text)
 
     if result [0] == "400":
