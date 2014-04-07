@@ -205,7 +205,7 @@ def init():
         sign_in()
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(filename='Server_Log.log',level=logging.DEBUG)
     # logging.basicConfig(filename='example.log',level=logging.DEBUG)
     init()
 
