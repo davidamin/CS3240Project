@@ -62,8 +62,6 @@ def signup(username, passhash):
         cur.execute("SELECT * FROM users WHERE username = ?", (username,))
 
         results = cur.fetchall()
-        for i in results:
-            print results
         if len(results) == 0:
             logging.debug("No user named : " + username + " found... Creating...")
             cur.execute("INSERT INTO users (username, passhash, user_role) VALUES (?, ?, ?)", (username, passhash, 0))
@@ -99,6 +97,7 @@ def signin(username, passhash):
                 cur.execute("INSERT INTO sessions (username, session, date) VALUES (?, ?, ?)", (username, session_id, temp_date.strftime('%Y/%m/%d %H:%M:%S')))
                 return json.dumps(("200",session_id))
             else:
+                logging.debug("User named : " + username + " Was not Authenticated")
                 return json.dumps(("401","BAD"))
 '''
 @app.route('/changepass/<username>/<passhash>')
@@ -143,9 +142,10 @@ def mkdir(username):
 @app.route('/upload-file/<sessionhash>/<path:filename>', methods=['GET', 'POST'])
 def upload_file(sessionhash,filename):
     if request.method == 'POST':
-        logging.debug("New File: " + filename + " .... Processing")
 
         user = authenticate(sessionhash)
+        logging.debug("User : " + user[1] + "New File : " + filename + " .... Processing")
+
         if (user[0]):
             file = request.files['file']
             userpath = os.path.join(WORKING_DIR,"filestore",user[1])
@@ -153,26 +153,30 @@ def upload_file(sessionhash,filename):
             logging.info("File: " + os.path.join(userpath, filename) + " ... Created")
             return json.dumps(("200", "OK"))
         else:
+            logging.error("User named : " + user[1] + " Was not Authenticated")
             return json.dumps(("400", "BAD"))
 
 #upload file into user account
 @app.route('/new-dir/<sessionhash>/<path:filepath>', methods=['GET', 'POST'])
 def new_dir(sessionhash,filepath):
-    logging.debug("New Directory: " + filepath + " .... Processing")
     user = authenticate(sessionhash)
+    logging.debug("User : " + user[1] + "New Directory : " + filepath + " .... Processing")
+
     if (user[0]):
         userpath = os.path.join(WORKING_DIR,"filestore",user[1])
         #file.save(os.path.join(userpath, filename))
         if not os.path.exists(userpath+"/"+filepath):
             os.makedirs(userpath+"/"+filepath)
-            logging.info("New Directory: " + filepath + " Created for user: " + user[1])
+            logging.info("New Directory: " + filepath + " ... Created")
         return json.dumps(("200", "OK"))
     else:
+        logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400", "BAD"))
 
 @app.route('/delete-file/<sessionhash>/<path:file>')
 def delete_file(sessionhash,file):
     user = authenticate(sessionhash)
+    logging.debug("User : " + user[1] + "Delete File : " + file + " .... Processing")
     if (user[0]):
         #filename = secure_filename(file)
         userpath = os.path.join(WORKING_DIR,"filestore",user[1],file)
@@ -184,12 +188,13 @@ def delete_file(sessionhash,file):
             logging.debug("File: " + userpath + " Does not Exist.... Nothing to Delete")
             return json.dumps(("201", "OK"))
     else:
-        logging.error("User does not exist")
+        logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400"), "BAD")
 
 @app.route('/delete-dir/<sessionhash>/<path:filepath>')
 def delete_dir(sessionhash,filepath):
     user = authenticate(sessionhash)
+    logging.debug("User : " + user[1] + "Delete Directory : " + filepath + " .... Processing")
     if (user[0]):
         userpath = os.path.join(WORKING_DIR,"filestore",user[1],filepath)
         if os.path.exists(userpath):
@@ -200,7 +205,7 @@ def delete_dir(sessionhash,filepath):
             logging.debug("Dir: " + userpath + " Does not Exist.... Nothing to Delete")
             return json.dumps(("201", "OK"))
     else:
-        logging.error("User does not exist")
+        logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400"), "BAD")
 
 # #use this to send a file from user
@@ -308,7 +313,7 @@ def view_report():
     return result_html
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
-    # logging.basicConfig(filename='example.log',level=logging.DEBUG)
+    #logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(filename='server.log',level=logging.DEBUG)
     logging.info("Starting server")
     app.run(debug = True)
