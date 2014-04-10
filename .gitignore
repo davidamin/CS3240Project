@@ -9,3 +9,7 @@
 
 Flask/filestore/*
 Flask/database.db
+
+Client/Server_Log.log
+
+Flask/AdminReport
