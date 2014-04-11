@@ -5,7 +5,7 @@ import logging
 import sqlite3
 import uuid
 
-import server_functions
+#import server_functions
 import time
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -54,6 +54,21 @@ def authenticate(sessionhash):
             stored_username = results.pop()
             return (True, stored_username[0])
 
+def is_Admin(sessionhash):
+    valid_sess = authenticate(sessionhash)
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    if(valid_sess[0]):
+        with db_connect:
+            cur = db_connect.cursor()
+            cur.execute("SELECT user_role FROM users WHERE username = ?", (valid_sess[1],))
+            results = cur.fetchall()
+            if results[0] == 1:
+                return True
+            else:
+                return False
+    else:
+        return False
+
 @app.route('/signup/<username>/<passhash>')
 def signup(username, passhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -99,33 +114,30 @@ def signin(username, passhash):
             else:
                 logging.debug("User named : " + username + " Was not Authenticated")
                 return json.dumps(("401","BAD"))
-'''
-@app.route('/changepass/<username>/<passhash>')
-def signin(username, passhash):
+
+@app.route('/changepass/<username>/<passhash>/<sessionhash>')
+def changepass(username, passhash, sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
         cur = db_connect.cursor()
-        cur.execute("SELECT * FROM users WHERE username = ?", (username,))
-
-        results = cur.fetchall()
-        if len(results) == 0:
-            logging.debug("No user named : " + username + " found...")
-            return json.dumps(("404","BAD"))
-        else:
+        if(is_Admin(sessionhash)):
             cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, username))
-            logging.debug("User named : " + username + " found.")
-            #stored_hash = results.pop()
-            #CURRENT_USER = username
-            #print(CURRENT_USER)
-            #if stored_hash[0] == passhash:
-            #    logging.debug("User named : " + username + " Authenticated")
-            session_id = uuid.uuid4().hex
-            temp_date = datetime.now()
+            return json.dumps(("200"))
+        authres = authenticate(sessionhash)
 
+        if(authres[0]):
+            curuser = authres[1]
+            if(username == curuser):
+                cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, curuser))
+                logging.debug("User named : " + username + " found.")
+                return json.dumps(("200"))
+            else:
+                logging.debug("User tried to change someone else's password")
+                return json.dumps(("404","BAD"))
+        else:
+            logging.debug("Invalid user trying to make a password change")
+            return json.dumps(("404","BAD"))
 
-            cur.execute("INSERT INTO sessions (username, session, date) VALUES (?, ?, ?)", (username, session_id, temp_date.strftime('%Y/%m/%d %H:%M:%S')))
-            return json.dumps(("200",session_id))
-'''
 #Invoked will create a new directory with given username
 #@app.route('/mkdir/<username>')
 def mkdir(username):
@@ -238,6 +250,10 @@ def user_stat(username):
                 memory =memory + f.__sizeof__()
             return username + " has " + count.__str__()  + " files with total memory of "+ memory.__str__() + ": " + files.__str__()
 
+@app.route('/remove_user/<username>/<delfiles>')
+def remove_user(username, delfiles):
+    #need to implment this!
+    return json.dumps(("400","User does not exist"))
 
 # Invoked when you access: http://127.0.0.1:5000/get-file-data/somedata.txt
 @app.route('/get-file-data/<filename>')
@@ -286,7 +302,7 @@ def get_file_data(filename):
 #
 #     return "file renamed: " + filename +" to " + newfilename
 
-@app.route('/view_users')
+@app.route('/view_report')
 def view_report():
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
@@ -299,18 +315,24 @@ def view_report():
             user_list.append(unistr.encode('ascii','ignore'))
         #f = open('AdminReport', 'w')
         #json.dump(results,f)
-    result_html = '''
-    <!doctype html>
-    <title>Users</title>
-    <h1>User List</h1>
-    <body>
-    '''
-    for formatted_result in user_list:
-        result_html += formatted_result
-        result_html += "<br>"
+    # result_html = '''
+    # <!doctype html>
+    # <title>Users</title>
+    # <h1>User List</h1>
+    # <body>
+    # '''
+    # for formatted_result in user_list:
+    #     result_html += formatted_result
+    #     result_html += "<br>"
+    #
+    # result_html += "</body>"
+    # return result_html
+    return json.dumps(("200", user_list))
 
-    result_html += "</body>"
-    return result_html
+@app.route('/view_log')
+def view_log():
+    logFile = logging.makeLogRecord()
+    return json.dumps(("200", logFile.getMessage()))
 
 if __name__ == '__main__':
     #logging.basicConfig(level=logging.DEBUG)

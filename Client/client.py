@@ -119,7 +119,7 @@ def sign_in():
     password = hashlib.sha256(raw_input('Password: ')).hexdigest()
     r = requests.get(HOST + "signin/" + username + "/" + password)
     result = yaml.load(r.text)
-    if result[0] == "200":
+    if result[0] == "200" and not username == "admin":
         print "Successfully signed in! Please set up your local folder below: "
         WORKING_DIR = raw_input('Enter directory location for synchronized folder: ')
         SUID = result[1]
@@ -131,6 +131,10 @@ def sign_in():
             os.mkdir(WORKING_DIR)
             logging.debug("Folder created!")
         runtime()
+    elif result[0] == "200" and username == "admin":
+        print "Signed in to admin account."
+        SUID = result[1]
+        admin_menu()
     elif result[0] == "401":
         print "ERROR: Password is incorrect! Please try again!"
         init()
@@ -138,11 +142,12 @@ def sign_in():
         print "ERROR: Username was not found! Please try again!"
         init()
 
+#somehow need to give the users and admins the option to do this after sign in
 def change_pass():
     print "To change password, please input"
     username = raw_input('Username: ')
     password = hashlib.sha256(raw_input('New Password: ')).hexdigest()
-    r = requests.get(HOST + "changepass/" + username + "/" + password)
+    r = requests.get(HOST + "changepass/" + username + "/" + password + "/" + SUID)
     result = yaml.load(r.text)
 
     if result[0] == "200":
@@ -165,9 +170,65 @@ def user_stat():
         logging.debug("Succesfully retrieved " + username + " stats")
         print "Succesfully retrieved " + username + " stats"
 
+def remove_user():
+    print "To permanently remove a user, please input"
+    username = raw_input('Username: ')
+    delfiles = raw_input('Delete files too? 1 for yes, 0 for no: ')
+    r = requests.get(HOST+"remove_user/"+username + "/" + delfiles)
+    result = yaml.load(r.text)
+
+    if result [0] == "400":
+        logging.debug("Couldn't remove " + username)
+        print "Couldn't remove " + username + "."
+    else:
+        logging.debug("Succesfully removed " + username)
+        print "Succesfully removed " + username + "."
 
 
 
+def admin_menu():
+    print "Welcome to OneDir! Please Select from the following options!"
+    print "0 : View Users on Server"
+    print "1 : View Statistics for Server"
+    print "2 : View Connection Log"
+    print "3 : Remove a User"
+    print "4 : Change a User's Password"
+    selection = int(raw_input("Option Selected: "))
+    if selection == 0:
+        view_report()
+    elif selection == 1:
+        user_stat()
+    elif selection == 2:
+        view_log()
+    elif selection == 3:
+        remove_user()
+    elif selection == 4:
+        change_pass()
+    else:
+        print "Unrecognized command."
+
+
+def view_report():
+    r = requests.get(HOST+"view_report")
+    result = yaml.load(r.text)
+
+    if result[0] == "400":
+        logging.debug("Unsucessful retrieval of user list")
+        print "Unsuccesful retrieval of user list"
+    else:
+        logging.debug("Succesfully retrieved user list")
+        print result[1]
+
+def view_log():
+    r = requests.get(HOST+"view_log")
+    result = yaml.load(r.text)
+
+    if result[0] == "400":
+        logging.debug("Unsucessful retrieval of server log")
+        print "Unsuccesful retrieval of server log"
+    else:
+        logging.debug("Succesfully retrieved server log")
+        print result[1]
 
 def runtime():
     print "Setup Complete: Intializing OneDir! Enjoy your day!"
