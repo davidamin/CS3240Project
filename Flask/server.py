@@ -252,8 +252,18 @@ def user_stat(username):
 
 @app.route('/remove_user/<username>/<delfiles>')
 def remove_user(username, delfiles):
-    #need to implment this!
-    return json.dumps(("400","User does not exist"))
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    with db_connect:
+        cur = db_connect.cursor()
+        cur.execute("DELETE FROM users WHERE username = ?", (username))
+        if(delfiles):
+            userpath = os.path.join(WORKING_DIR,"filestore",username)
+            if os.path.exists(userpath):
+                logging.debug("File: " + userpath + " Exists... Deleting")
+                os.removedirs(userpath)
+            else:
+                logging.debug("Dir: " + userpath + " Does not Exist.... Nothing to Delete")
+        return json.dumps(("200","User" + username + " removed."))
 
 # Invoked when you access: http://127.0.0.1:5000/get-file-data/somedata.txt
 @app.route('/get-file-data/<filename>')
@@ -331,8 +341,11 @@ def view_report():
 
 @app.route('/view_log')
 def view_log():
-    logFile = logging.makeLogRecord()
-    return json.dumps(("200", logFile.getMessage()))
+    logFile = open("server.log", 'r')
+    commandList = []
+    for line in logFile:
+        commandList.append(line)
+    return json.dumps(("200", commandList))
 
 if __name__ == '__main__':
     #logging.basicConfig(level=logging.DEBUG)
