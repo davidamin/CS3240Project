@@ -133,7 +133,6 @@ def sign_in():
         runtime()
     elif result[0] == "200" and username == "admin":
         print "Signed in to admin account."
-        SUID = result[1]
         admin_menu()
     elif result[0] == "401":
         print "ERROR: Password is incorrect! Please try again!"
@@ -146,7 +145,23 @@ def sign_in():
 def change_pass():
     print "To change password, please input"
     username = raw_input('Username: ')
+    oldpass = hashlib.sha256(raw_input('Old Password: ')).hexdigest()
     password = hashlib.sha256(raw_input('New Password: ')).hexdigest()
+
+    r = requests.get(HOST + "signin/" + username + "/" + oldpass)
+    result = yaml.load(r.text)
+    if result[0] == "200" and not username == "admin":
+        SUID = result[1]
+    elif result[0] == "200" and username == "admin":
+        SUID = result[1]
+        #admin_menu()
+    elif result[0] == "401":
+        print "ERROR: Password is incorrect! Please try again!"
+        init()
+    elif result[0] == "404":
+        print "ERROR: Username was not found! Please try again!"
+        init()
+
     r = requests.get(HOST + "changepass/" + username + "/" + password + "/" + SUID)
     result = yaml.load(r.text)
 
