@@ -38,8 +38,8 @@ app.config.update(dict(
     DATABASE='database.db',
     USERS= {}))
 
-WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
-#WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
+#WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
+WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
 
 def authenticate(sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -226,8 +226,36 @@ def delete_dir(sessionhash,filepath):
 #     userpath = os.path.join(WORKING_DIR,filename)
 #     return send_file(userpath, as_attachment=True)
 
-@app.route('/user-stat/<username>')
-def user_stat(username):
+
+def recursealldir(path, filename):
+    in_filename = os.path.join(path,filename.__str__())
+    directory = {}
+    # if has more than 1 link then it must be a dir
+    if (os.stat(in_filename).st_nlink) < 2:
+        directory[filename.__str__()] = filename.__sizeof__()
+        return directory.__str__()
+    else :
+        subdirectory ={}
+        #this means that there are more than one file in path so we go through each
+        for infile in os.listdir(in_filename):
+            in_filename2 = os.path.join(in_filename,infile.__str__())
+            #recursively checks if inside is also a dir
+            #not another path
+            if ((os.stat(in_filename2).st_nlink) < 2):
+                #base case:not a directory so add normal to subdirectory
+                subdirectory[infile.__str__()] = infile.__sizeof__()
+
+            else:
+                #it is a directory so makes another dictonary for it
+                subdirectory[infile.__str__()] = recursealldir(in_filename,infile.__str__())
+        oldstr = subdirectory.__str__()
+        newstr = oldstr.replace("\\", "")
+
+    return newstr
+                #return subdirectory to add to files
+
+@app.route('/stat/<username>')
+def stat(username):
     """Returns the size and number of files stored in a directory on the server"""
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
@@ -238,17 +266,8 @@ def user_stat(username):
             logging.debug("No user named : " + username + " found...")
             return json.dumps(("400","User does not exist"))
         else:
-            files = {}
-            full_filename = os.path.join(WORKING_DIR, username)
-            count = 0
-            memory = 0
-            for f in os.listdir(full_filename):
-                files[f.__str__()]= f.__sizeof__()
 
-                logging.debug(files)
-                count = count + 1
-                memory =memory + f.__sizeof__()
-            return username + " has " + count.__str__()  + " files with total memory of "+ memory.__str__() + ": " + files.__str__()
+            return recursealldir(WORKING_DIR,username)
 
 @app.route('/remove_user/<username>/<delfiles>')
 def remove_user(username, delfiles):
