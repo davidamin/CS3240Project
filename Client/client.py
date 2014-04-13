@@ -133,6 +133,7 @@ def sign_in():
         runtime()
     elif result[0] == "200" and username == "admin":
         print "Signed in to admin account."
+        SUID = result[1]
         admin_menu()
     elif result[0] == "401":
         print "ERROR: Password is incorrect! Please try again!"
@@ -147,14 +148,10 @@ def change_pass():
     username = raw_input('Username: ')
     oldpass = hashlib.sha256(raw_input('Old Password: ')).hexdigest()
     password = hashlib.sha256(raw_input('New Password: ')).hexdigest()
-
     r = requests.get(HOST + "signin/" + username + "/" + oldpass)
     result = yaml.load(r.text)
-    if result[0] == "200" and not username == "admin":
+    if result[0] == "200":
         SUID = result[1]
-    elif result[0] == "200" and username == "admin":
-        SUID = result[1]
-        #admin_menu()
     elif result[0] == "401":
         print "ERROR: Password is incorrect! Please try again!"
         init()
@@ -172,15 +169,32 @@ def change_pass():
         print "ERROR: Username not found! Please try again!"
         init()
 
+def admin_change_pass():
+    print "To change user's password, please input"
+    username = raw_input('Username: ')
+    password = hashlib.sha256(raw_input('New Password: ')).hexdigest()
+
+    r = requests.get(HOST + "changepass/" + username + "/" + password + "/" + SUID)
+    result = yaml.load(r.text)
+
+    if result[0] == "200":
+        print "Password successfully changed!"
+        admin_menu()
+    else:
+        print "ERROR: Username not found! Please try again!"
+        admin_menu()
+
 def user_stat():
     print "To see stats of user, please input"
     username = raw_input('Username: ')
     r = requests.get(HOST+"user-stat/"+username)
     result = yaml.load(r.text)
 
-    if result [0] == "400":
+    if result[0] == "400":
         logging.debug("Unsucessful retrieval of " + username + " stats")
         print "Unsuccesful retrieval of " + username + " stats"
+    elif result[0] == "200":
+        print result[1]
     else:
         logging.debug("Succesfully retrieved " + username + " stats")
         print "Succesfully retrieved " + username + " stats"
@@ -218,7 +232,7 @@ def admin_menu():
     elif selection == 3:
         remove_user()
     elif selection == 4:
-        change_pass()
+        admin_change_pass()
     else:
         print "Unrecognized command."
 

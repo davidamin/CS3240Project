@@ -62,7 +62,7 @@ def is_Admin(sessionhash):
             cur = db_connect.cursor()
             cur.execute("SELECT user_role FROM users WHERE username = ?", (valid_sess[1],))
             results = cur.fetchall()
-            if results[0] == 1:
+            if results[0][0] == 1:
                 return True
             else:
                 return False
@@ -122,7 +122,7 @@ def changepass(username, passhash, sessionhash):
         cur = db_connect.cursor()
         if(is_Admin(sessionhash)):
             cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, username))
-            return json.dumps(("200"))
+            return json.dumps(("200","Successfully changed password"))
         authres = authenticate(sessionhash)
 
         if(authres[0]):
@@ -130,7 +130,7 @@ def changepass(username, passhash, sessionhash):
             if(username == curuser):
                 cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, curuser))
                 logging.debug("User named : " + username + " found.")
-                return json.dumps(("200"))
+                return json.dumps(("200","Successfully changed password"))
             else:
                 logging.debug("User tried to change someone else's password")
                 return json.dumps(("404","BAD"))
@@ -248,16 +248,17 @@ def user_stat(username):
                 logging.debug(files)
                 count = count + 1
                 memory =memory + f.__sizeof__()
-            return username + " has " + count.__str__()  + " files with total memory of "+ memory.__str__() + ": " + files.__str__()
+            return json.dumps(("200","" + username + " has " + count.__str__()  + " files with total memory of "+ memory.__str__() + ": " + files.__str__() + ""))
 
 @app.route('/remove_user/<username>/<delfiles>')
 def remove_user(username, delfiles):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
         cur = db_connect.cursor()
-        cur.execute("DELETE FROM users WHERE username = ?", (username))
+        cur.execute("DELETE FROM users WHERE username = ?", (username,))
         if(delfiles):
             userpath = os.path.join(WORKING_DIR,"filestore",username)
+            print userpath
             if os.path.exists(userpath):
                 logging.debug("File: " + userpath + " Exists... Deleting")
                 os.removedirs(userpath)
