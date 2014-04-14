@@ -1,0 +1,9 @@
+Sprint 3 Review:
+What did we accomplish?
+We got admin functions working (for the most part, some further tweaks are required), and we got autosync working, which is also the first step toward multiple user support
+What do we need to do in the next sprint?
+We must fully implement multiple user support, implement downloading a file from the server, test connectivity over a network across machines, test our code on Ubuntu fully, get the admin stat function working, and maybe implement some optional bonuses
+What are our risks going forward?
+Network issues when transfering across machines, difficulties in development as a result of busy schedules, and failures in the implementing on Ubuntu
+How do we manage risks?
+We test new ground as soon as possible, and find time to meet up if necessary

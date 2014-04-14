@@ -216,10 +216,8 @@ def admin_change_pass():
 
     if result[0] == "200":
         print "Password successfully changed!"
-        admin_menu()
     else:
         print "ERROR: Username not found! Please try again!"
-        admin_menu()
 
 def user_stat():
     print "To see stats of user, please input"
@@ -285,6 +283,8 @@ def admin_menu():
         admin_change_pass()
     else:
         print "Unrecognized command."
+    if selection != 5:
+        admin_menu()
 
 
 def view_report():
