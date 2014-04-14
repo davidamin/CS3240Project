@@ -232,7 +232,7 @@ def recursealldir(path, filename):
     directory = {}
     # if has more than 1 link then it must be a dir
     if (os.stat(in_filename).st_nlink) < 2:
-        directory[filename.__str__()] = filename.__sizeof__()
+        directory[filename.__str__()] = os.path.getsize(in_filename)
         return directory.__str__()
     else :
         subdirectory ={}
@@ -243,7 +243,7 @@ def recursealldir(path, filename):
             #not another path
             if ((os.stat(in_filename2).st_nlink) < 2):
                 #base case:not a directory so add normal to subdirectory
-                subdirectory[infile.__str__()] = infile.__sizeof__()
+                subdirectory[infile.__str__()] = os.path.getsize(in_filename2)
 
             else:
                 #it is a directory so makes another dictonary for it
@@ -253,6 +253,7 @@ def recursealldir(path, filename):
 
     return newstr
                 #return subdirectory to add to files
+
 
 @app.route('/stat/<username>')
 def stat(username):
@@ -266,9 +267,14 @@ def stat(username):
             logging.debug("No user named : " + username + " found...")
             return json.dumps(("400","User does not exist"))
         else:
+            #the dictionary showing user's directory and subdirectorys and files
+            string = recursealldir(WORKING_DIR,username)
+            foldercount = string.count("{")-1
+            filescount = string.count(":") - foldercount
+            totalsize = os.path.getsize(os.path.join(WORKING_DIR,username))
 
-            return recursealldir(WORKING_DIR,username)
-
+            return "User: " +username + " [ Folder count: " + str(foldercount) \
+                   + " , File count:" + str(filescount) + ", Total size: "+ str(totalsize) + "]"
 @app.route('/remove_user/<username>/<delfiles>')
 def remove_user(username, delfiles):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
