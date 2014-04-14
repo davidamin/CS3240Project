@@ -4,8 +4,9 @@ import os
 import logging
 import sqlite3
 import uuid
+import pickle
 
-#import server_functions
+
 import time
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -38,8 +39,9 @@ app.config.update(dict(
     DATABASE='database.db',
     USERS= {}))
 
-#WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
-WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
+WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
+#WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
+
 
 def authenticate(sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -62,7 +64,7 @@ def is_Admin(sessionhash):
             cur = db_connect.cursor()
             cur.execute("SELECT user_role FROM users WHERE username = ?", (valid_sess[1],))
             results = cur.fetchall()
-            if results[0] == 1:
+            if results[0][0] == 1:
                 return True
             else:
                 return False
@@ -122,7 +124,7 @@ def changepass(username, passhash, sessionhash):
         cur = db_connect.cursor()
         if(is_Admin(sessionhash)):
             cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, username))
-            return json.dumps(("200"))
+            return json.dumps(("200","Successfully changed password"))
         authres = authenticate(sessionhash)
 
         if(authres[0]):
@@ -130,7 +132,7 @@ def changepass(username, passhash, sessionhash):
             if(username == curuser):
                 cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, curuser))
                 logging.debug("User named : " + username + " found.")
-                return json.dumps(("200"))
+                return json.dumps(("200","Successfully changed password"))
             else:
                 logging.debug("User tried to change someone else's password")
                 return json.dumps(("404","BAD"))
@@ -143,7 +145,7 @@ def changepass(username, passhash, sessionhash):
 def mkdir(username):
     """Creates a directory in the user's server-side OneDir directory"""
     logging.debug("Making directory " + username + " in filestore" )
-    full_filename = os.path.join(WORKING_DIR, username)
+    full_filename = os.path.join(WORKING_DIR,"filestore", username)
     if os.path.exists(full_filename):
         return username + " already exist!"
     else:
@@ -220,6 +222,48 @@ def delete_dir(sessionhash,filepath):
         logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400"), "BAD")
 
+@app.route('/snapshot/<sessionhash>', methods=['GET', 'POST'])
+def snapshot(sessionhash):
+    if request.method == 'POST':
+
+        user = authenticate(sessionhash)
+        logging.debug("User : " + user[1] + "Snapshot Save.... Processing")
+
+        if (user[0]):
+            #data = pickle.loads(request.data)
+            db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+            with db_connect:
+                cur = db_connect.cursor()
+                date = str(datetime.now())
+                cur.execute("DELETE FROM snaps WHERE username = ?", (user[1],))
+                cur.execute("INSERT INTO snaps (username, time_stamp, snapshot) VALUES (?, ?, ?)", (user[1],date, request.data))
+
+            logging.info("User :  " + user[1] + " Updated Snapshot with time_stamp : " + date)
+            return json.dumps(("200", date))
+        else:
+            logging.error("User named : " + user[1] + " Was not Authenticated")
+            return json.dumps(("400", "BAD"))
+
+    else:
+        print request.method
+
+@app.route('/timestamp/<sessionhash>')
+def timestamp(sessionhash):
+    user = authenticate(sessionhash)
+    if (user[0]):
+        db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+        with db_connect:
+            cur = db_connect.cursor()
+            cur.execute("SELECT time_stamp FROM snaps WHERE username = ?", (user[1],))
+
+            ret = cur.fetchone()
+            logging.info("User :  " + user[1] + " Accessed Timestamp ")
+            return json.dumps(("200"), ret[0])
+    else:
+        logging.error("User named : " + user[1] + " Was not Authenticated")
+        return json.dumps(("400", "BAD"))
+
+
 # #use this to send a file from user
 # @app.route('/send/<filename>', methods=['GET','POST'])
 # def send(filename):
@@ -266,17 +310,27 @@ def stat(username):
             logging.debug("No user named : " + username + " found...")
             return json.dumps(("400","User does not exist"))
         else:
+            files = {}
+            full_filename = os.path.join(WORKING_DIR, username)
+            count = 0
+            memory = 0
+            for f in os.listdir(full_filename):
+                files[f.__str__()]= f.__sizeof__()
 
-            return recursealldir(WORKING_DIR,username)
+                logging.debug(files)
+                count = count + 1
+                memory =memory + f.__sizeof__()
+            return json.dumps(("200","" + username + " has " + count.__str__()  + " files with total memory of "+ memory.__str__() + ": " + files.__str__() + ""))
 
 @app.route('/remove_user/<username>/<delfiles>')
 def remove_user(username, delfiles):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
         cur = db_connect.cursor()
-        cur.execute("DELETE FROM users WHERE username = ?", (username))
+        cur.execute("DELETE FROM users WHERE username = ?", (username,))
         if(delfiles):
             userpath = os.path.join(WORKING_DIR,"filestore",username)
+            print userpath
             if os.path.exists(userpath):
                 logging.debug("File: " + userpath + " Exists... Deleting")
                 os.removedirs(userpath)
@@ -367,7 +421,7 @@ def view_log():
     return json.dumps(("200", commandList))
 
 if __name__ == '__main__':
-    #logging.basicConfig(level=logging.DEBUG)
-    logging.basicConfig(filename='server.log',level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
+    #logging.basicConfig(filename='server.log',level=logging.DEBUG)
     logging.info("Starting server")
     app.run(debug = True)

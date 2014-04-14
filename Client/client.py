@@ -1,67 +1,97 @@
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from watchdog.utils import dirsnapshot
 import hashlib
 import logging
 import requests
 import yaml
 import os
 import time
+import json
 from Queue import *
 from threading import Thread, Lock
 import threading
+import pickle
 
 
-# Things to do...
-# 1) Threading loop on the command processing. DONE
-# 2) Solve delete issues. Rooted to file naming issues.  DONE
-# 3) Get error communication down pat? MOSTLY
-# 4) Fix logging issues. MOSTLY
 
 HOST = 'http://127.0.0.1:5000/'
 
 WORKING_DIR = ""
 SUID = ""
 PROC_QUEUE = Queue()
+TIME_STAMP = time.time()
+DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot
+SYNCRHONIZED = True
+
 
 def job_processor(name, stop_event):
+    #global SYNCRHONIZED
+    SAVE = False
     while (1):
         if stop_event.is_set():
             break
         elif PROC_QUEUE.empty() == False:
-            try:
-                job = PROC_QUEUE.get()
-                logging.debug("PROCCESSING JOB " + job[0] + " ON  " + job[1])
-                if job[0] == "Upload":
-                    r = requests.post(HOST + "upload-file/" + SUID + secure_filepass(job[1]), files={'file': open(job[1], 'rb')})
-                    result = yaml.load(r.text)
-                    if result[0] == "200":
-                        logging.debug("Uploaded file: " + secure_filepass(job[1]))
-                    elif result[0] == "400":
-                        logging.error("***Authentication Failure***")
-                elif job[0] == "Delete":
-                    r = requests.get(HOST + "delete-file/" + SUID + secure_filepass(job[1]))
-                    result = yaml.load(r.text)
-                    if result[0] == "200":
-                        logging.debug("Deleted file: " + secure_filepass(job[1]))
-                    elif result[0] == "400":
-                        logging.error("***Authentication Failure***")
-                elif job[0] == "New Dir":
-                    r = requests.get(HOST + "new-dir/" + SUID + secure_filepass(job[1]))
-                    result = yaml.load(r.text)
-                    if result[0] == "200":
-                        logging.debug("Directory Created: " + secure_filepass(job[1]))
-                    elif result[0] == "400":
-                        logging.error("***Authentication Failure***")
-                elif job[0] == "Remove Dir":
-                    r = requests.get(HOST + "delete-dir/" + SUID + secure_filepass(job[1]))
-                    result = yaml.load(r.text)
-                    if result[0] == "200":
-                        logging.debug("Directory Created: " + secure_filepass(job[1]))
-                    elif result[0] == "400":
-                        logging.error("***Authentication Failure***")
-                PROC_QUEUE.task_done()
-            except:
-                logging.error("ISSUE PERFORMING JOB")
+            if SYNCRHONIZED == True:
+                try:
+                    job = PROC_QUEUE.get()
+                    #SAVE = False
+                    logging.debug("PROCCESSING JOB " + job[0] + " ON  " + job[1])
+                    if job[0] == "Upload":
+                        r = requests.post(HOST + "upload-file/" + SUID + secure_filepass(job[1]), files={'file': open(job[1], 'rb')})
+                        result = yaml.load(r.text)
+                        if result[0] == "200":
+                            logging.debug("Uploaded file: " + secure_filepass(job[1]))
+                            SAVE = True
+                        elif result[0] == "400":
+                            logging.error("***Authentication Failure***")
+                    elif job[0] == "Delete":
+                        r = requests.get(HOST + "delete-file/" + SUID + secure_filepass(job[1]))
+                        result = yaml.load(r.text)
+                        if result[0] == "200":
+                            SAVE = True
+                            logging.debug("Deleted file: " + secure_filepass(job[1]))
+                        elif result[0] == "400":
+                            logging.error("***Authentication Failure***")
+                    elif job[0] == "New Dir":
+                        r = requests.get(HOST + "new-dir/" + SUID + secure_filepass(job[1]))
+                        result = yaml.load(r.text)
+                        if result[0] == "200":
+                            SAVE = True
+                            logging.debug("Directory Created: " + secure_filepass(job[1]))
+                        elif result[0] == "400":
+                            logging.error("***Authentication Failure***")
+                    elif job[0] == "Remove Dir":
+                        r = requests.get(HOST + "delete-dir/" + SUID + secure_filepass(job[1]))
+                        result = yaml.load(r.text)
+                        if result[0] == "200":
+                            SAVE = True
+                            logging.debug("Directory Created: " + secure_filepass(job[1]))
+                        elif result[0] == "400":
+                            logging.error("***Authentication Failure***")
+                    PROC_QUEUE.task_done()
+
+                except:
+                    logging.error("ISSUE PERFORMING JOB")
+
+        elif PROC_QUEUE.empty() == True & SAVE == True:
+            if  SYNCRHONIZED == True:
+                SAVE = False
+                logging.debug("New Snapshot required....")
+                global TIME_STAMP
+                global DIR_SNAPSHOT
+
+                DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)
+                file_write = file("./client_SAVEFILE", 'w')
+                yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT),file_write)
+                send = pickle.dumps(DIR_SNAPSHOT)
+                r = requests.post(HOST + "snapshot/" + SUID, data=send)
+                result = yaml.load(r.text)
+                if result[0] == "200":
+                    logging.debug("Snapshot saved. Timestamp updated to: " + result[1])
+                    TIME_STAMP = result[1]
+                elif result[0] == "400":
+                    logging.error("***Authentication Failure***")
 
         stop_event.wait(1)
 
@@ -69,7 +99,6 @@ def secure_filepass(filename):
     return filename.replace(WORKING_DIR,"")
 
 class OneDirFileHandles(FileSystemEventHandler):
-    ## HANDLE ALL THINGS TO UPLOAD STUFF HERE!!!!!!!!
     def on_created(self, event):
         if event.is_directory:
             logging.debug("Directory: " + event.src_path + " has been created locally.")
@@ -114,6 +143,8 @@ def new_user():
 def sign_in():
     global WORKING_DIR
     global SUID
+    global TIME_STAMP
+    global DIR_SNAPSHOT
     print "Signing in. Please fill out the following details:"
     username = raw_input('Username: ')
     password = hashlib.sha256(raw_input('Password: ')).hexdigest()
@@ -130,9 +161,16 @@ def sign_in():
         else:
             os.mkdir(WORKING_DIR)
             logging.debug("Folder created!")
+
+        TIME_STAMP = time.time()
+        DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)
+        file_write = file("./client_SAVEFILE", 'w')
+        yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT),file_write)
+
         runtime()
     elif result[0] == "200" and username == "admin":
         print "Signed in to admin account."
+        SUID = result[1]
         admin_menu()
     elif result[0] == "401":
         print "ERROR: Password is incorrect! Please try again!"
@@ -147,14 +185,10 @@ def change_pass():
     username = raw_input('Username: ')
     oldpass = hashlib.sha256(raw_input('Old Password: ')).hexdigest()
     password = hashlib.sha256(raw_input('New Password: ')).hexdigest()
-
     r = requests.get(HOST + "signin/" + username + "/" + oldpass)
     result = yaml.load(r.text)
-    if result[0] == "200" and not username == "admin":
+    if result[0] == "200":
         SUID = result[1]
-    elif result[0] == "200" and username == "admin":
-        SUID = result[1]
-        #admin_menu()
     elif result[0] == "401":
         print "ERROR: Password is incorrect! Please try again!"
         init()
@@ -172,18 +206,48 @@ def change_pass():
         print "ERROR: Username not found! Please try again!"
         init()
 
+def admin_change_pass():
+    print "To change user's password, please input"
+    username = raw_input('Username: ')
+    password = hashlib.sha256(raw_input('New Password: ')).hexdigest()
+
+    r = requests.get(HOST + "changepass/" + username + "/" + password + "/" + SUID)
+    result = yaml.load(r.text)
+
+    if result[0] == "200":
+        print "Password successfully changed!"
+        admin_menu()
+    else:
+        print "ERROR: Username not found! Please try again!"
+        admin_menu()
+
 def user_stat():
     print "To see stats of user, please input"
     username = raw_input('Username: ')
-    r = requests.get(HOST+"user-stat/"+username)
+    r = requests.get(HOST+"stat/"+username)
     result = yaml.load(r.text)
 
-    if result [0] == "400":
+    if result[0] == "400":
         logging.debug("Unsucessful retrieval of " + username + " stats")
         print "Unsuccesful retrieval of " + username + " stats"
+    elif result[0] == "200":
+        print result[1]
     else:
         logging.debug("Succesfully retrieved " + username + " stats")
         print "Succesfully retrieved " + username + " stats"
+
+def synchronize():
+    global SYNCRHONIZED
+    if SYNCRHONIZED:
+        print "To turn off Autosync, enter y:"
+        selection = str(raw_input("> "))
+        if selection == "y":
+            SYNCRHONIZED = False
+    else:
+        print "To turn on Autosync, enter y:"
+        selection = str(raw_input("> "))
+        if selection == "y":
+            SYNCRHONIZED = True
 
 def remove_user():
     print "To permanently remove a user, please input"
@@ -218,7 +282,7 @@ def admin_menu():
     elif selection == 3:
         remove_user()
     elif selection == 4:
-        change_pass()
+        admin_change_pass()
     else:
         print "Unrecognized command."
 
@@ -249,7 +313,7 @@ def runtime():
     print "Setup Complete: Intializing OneDir! Enjoy your day!"
     event_handler = OneDirFileHandles()
     observer = Observer()
-    print WORKING_DIR
+    #print WORKING_DIR
 
     #the recursive variable here determines whether the program watches subdirectories
     observer.schedule(event_handler, WORKING_DIR, recursive=True)
@@ -260,6 +324,7 @@ def runtime():
     th.start()
     try:
         while True:
+            synchronize()
             time.sleep(1)
     except KeyboardInterrupt:
         observer.stop()
@@ -268,22 +333,33 @@ def runtime():
     th.join()
 
 def init():
-    print "Welcome to OneDir! Please Select from the following options!"
-    print "0 : Create New Account!"
-    print "1 : Sign into Account!"
-    print "2 : Change my password!"
-    selection = int(raw_input("Option Selected: "))
-    if selection == 0:
-        new_user()
-    elif selection == 2:
-        change_pass()
+    if os.path.exists("./client_SAVEFILE"):
+        global WORKING_DIR
+        global SUID
+        global TIME_STAMP
+        global DIR_SNAPSHOT
+        result = yaml.load(file('./client_SAVEFILE', 'r'))
+        WORKING_DIR = result[0]
+        SUID = result[1]
+        TIME_STAMP = result[2]
+        DIR_SNAPSHOT = result[3]
+        runtime()
+
     else:
-        sign_in()
+        print "Welcome to OneDir! Please Select from the following options!"
+        print "0 : Create New Account!"
+        print "1 : Sign into Account!"
+        print "2 : Change my password!"
+        selection = int(raw_input("Option Selected: "))
+        if selection == 0:
+            new_user()
+        elif selection == 2:
+            change_pass()
+        else:
+            sign_in()
 
 if __name__ == '__main__':
-    logging.basicConfig(filename='Server_Log.log',level=logging.DEBUG)
+    #logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(filename='Client_Log.log',level=logging.DEBUG)
     # logging.basicConfig(filename='example.log',level=logging.DEBUG)
     init()
-
-
-
