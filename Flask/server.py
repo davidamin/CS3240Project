@@ -6,6 +6,7 @@ import sqlite3
 import uuid
 import pickle
 
+
 import time
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -41,6 +42,7 @@ app.config.update(dict(
 WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 #WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
 
+
 def authenticate(sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
@@ -53,6 +55,21 @@ def authenticate(sessionhash):
         else:
             stored_username = results.pop()
             return (True, stored_username[0])
+
+def is_Admin(sessionhash):
+    valid_sess = authenticate(sessionhash)
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    if(valid_sess[0]):
+        with db_connect:
+            cur = db_connect.cursor()
+            cur.execute("SELECT user_role FROM users WHERE username = ?", (valid_sess[1],))
+            results = cur.fetchall()
+            if results[0][0] == 1:
+                return True
+            else:
+                return False
+    else:
+        return False
 
 @app.route('/signup/<username>/<passhash>')
 def signup(username, passhash):
@@ -99,33 +116,30 @@ def signin(username, passhash):
             else:
                 logging.debug("User named : " + username + " Was not Authenticated")
                 return json.dumps(("401","BAD"))
-'''
-@app.route('/changepass/<username>/<passhash>')
-def signin(username, passhash):
+
+@app.route('/changepass/<username>/<passhash>/<sessionhash>')
+def changepass(username, passhash, sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
         cur = db_connect.cursor()
-        cur.execute("SELECT * FROM users WHERE username = ?", (username,))
-
-        results = cur.fetchall()
-        if len(results) == 0:
-            logging.debug("No user named : " + username + " found...")
-            return json.dumps(("404","BAD"))
-        else:
+        if(is_Admin(sessionhash)):
             cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, username))
-            logging.debug("User named : " + username + " found.")
-            #stored_hash = results.pop()
-            #CURRENT_USER = username
-            #print(CURRENT_USER)
-            #if stored_hash[0] == passhash:
-            #    logging.debug("User named : " + username + " Authenticated")
-            session_id = uuid.uuid4().hex
-            temp_date = datetime.now()
+            return json.dumps(("200","Successfully changed password"))
+        authres = authenticate(sessionhash)
 
+        if(authres[0]):
+            curuser = authres[1]
+            if(username == curuser):
+                cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, curuser))
+                logging.debug("User named : " + username + " found.")
+                return json.dumps(("200","Successfully changed password"))
+            else:
+                logging.debug("User tried to change someone else's password")
+                return json.dumps(("404","BAD"))
+        else:
+            logging.debug("Invalid user trying to make a password change")
+            return json.dumps(("404","BAD"))
 
-            cur.execute("INSERT INTO sessions (username, session, date) VALUES (?, ?, ?)", (username, session_id, temp_date.strftime('%Y/%m/%d %H:%M:%S')))
-            return json.dumps(("200",session_id))
-'''
 #Invoked will create a new directory with given username
 #@app.route('/mkdir/<username>')
 def mkdir(username):
@@ -256,8 +270,36 @@ def timestamp(sessionhash):
 #     userpath = os.path.join(WORKING_DIR,filename)
 #     return send_file(userpath, as_attachment=True)
 
-@app.route('/user-stat/<username>')
-def user_stat(username):
+
+def recursealldir(path, filename):
+    in_filename = os.path.join(path,filename.__str__())
+    directory = {}
+    # if has more than 1 link then it must be a dir
+    if (os.stat(in_filename).st_nlink) < 2:
+        directory[filename.__str__()] = filename.__sizeof__()
+        return directory.__str__()
+    else :
+        subdirectory ={}
+        #this means that there are more than one file in path so we go through each
+        for infile in os.listdir(in_filename):
+            in_filename2 = os.path.join(in_filename,infile.__str__())
+            #recursively checks if inside is also a dir
+            #not another path
+            if ((os.stat(in_filename2).st_nlink) < 2):
+                #base case:not a directory so add normal to subdirectory
+                subdirectory[infile.__str__()] = infile.__sizeof__()
+
+            else:
+                #it is a directory so makes another dictonary for it
+                subdirectory[infile.__str__()] = recursealldir(in_filename,infile.__str__())
+        oldstr = subdirectory.__str__()
+        newstr = oldstr.replace("\\", "")
+
+    return newstr
+                #return subdirectory to add to files
+
+@app.route('/stat/<username>')
+def stat(username):
     """Returns the size and number of files stored in a directory on the server"""
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
@@ -278,8 +320,23 @@ def user_stat(username):
                 logging.debug(files)
                 count = count + 1
                 memory =memory + f.__sizeof__()
-            return username + " has " + count.__str__()  + " files with total memory of "+ memory.__str__() + ": " + files.__str__()
+            return json.dumps(("200","" + username + " has " + count.__str__()  + " files with total memory of "+ memory.__str__() + ": " + files.__str__() + ""))
 
+@app.route('/remove_user/<username>/<delfiles>')
+def remove_user(username, delfiles):
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    with db_connect:
+        cur = db_connect.cursor()
+        cur.execute("DELETE FROM users WHERE username = ?", (username,))
+        if(delfiles):
+            userpath = os.path.join(WORKING_DIR,"filestore",username)
+            print userpath
+            if os.path.exists(userpath):
+                logging.debug("File: " + userpath + " Exists... Deleting")
+                os.removedirs(userpath)
+            else:
+                logging.debug("Dir: " + userpath + " Does not Exist.... Nothing to Delete")
+        return json.dumps(("200","User" + username + " removed."))
 
 # Invoked when you access: http://127.0.0.1:5000/get-file-data/somedata.txt
 @app.route('/get-file-data/<filename>')
@@ -328,7 +385,7 @@ def get_file_data(filename):
 #
 #     return "file renamed: " + filename +" to " + newfilename
 
-@app.route('/view_users')
+@app.route('/view_report')
 def view_report():
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
@@ -341,18 +398,27 @@ def view_report():
             user_list.append(unistr.encode('ascii','ignore'))
         #f = open('AdminReport', 'w')
         #json.dump(results,f)
-    result_html = '''
-    <!doctype html>
-    <title>Users</title>
-    <h1>User List</h1>
-    <body>
-    '''
-    for formatted_result in user_list:
-        result_html += formatted_result
-        result_html += "<br>"
+    # result_html = '''
+    # <!doctype html>
+    # <title>Users</title>
+    # <h1>User List</h1>
+    # <body>
+    # '''
+    # for formatted_result in user_list:
+    #     result_html += formatted_result
+    #     result_html += "<br>"
+    #
+    # result_html += "</body>"
+    # return result_html
+    return json.dumps(("200", user_list))
 
-    result_html += "</body>"
-    return result_html
+@app.route('/view_log')
+def view_log():
+    logFile = open("server.log", 'r')
+    commandList = []
+    for line in logFile:
+        commandList.append(line)
+    return json.dumps(("200", commandList))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
