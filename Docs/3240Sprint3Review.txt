@@ -1,9 +1,21 @@
-Sprint 3 Review:
+CS3240 Sprint 3 Review
+
 What did we accomplish?
-We got admin functions working (for the most part, some further tweaks are required), and we got autosync working, which is also the first step toward multiple user support
+Both a User and Admin can change password.  Server can duplicate file changes made to the server and vice versa.  
+Admin can pull user statistics on which files they have and their sizes (needs tweeking).   
+Admins can also remove users and their files as well as viewing a connection log.
+We got autosync working, which is also the first step toward multiple user support.
+
 What do we need to do in the next sprint?
 We must fully implement multiple user support, implement downloading a file from the server, test connectivity over a network across machines, test our code on Ubuntu fully, get the admin stat function working, and maybe implement some optional bonuses
-What are our risks going forward?
-Network issues when transfering across machines, difficulties in development as a result of busy schedules, and failures in the implementing on Ubuntu
-How do we manage risks?
-We test new ground as soon as possible, and find time to meet up if necessary
+
+Risks:
+Network issues when transfering across machines.
+We have only tested the program in OSX and not yet in Ubuntu.
+We also need to work on being able to download files off of the server.
+We are experiencing difficulties in development as a result of busy schedules.
+Network issues when transfering across machines.
+
+Risk Management:
+We're going to begin testing our program in Ubuntu to make sure it will work, so we don’t face problems later in development.
+Need to find time to meet up if necessary
