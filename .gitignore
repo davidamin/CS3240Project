@@ -13,3 +13,7 @@ Flask/database.db
 Client/Server_Log.log
 
 Flask/AdminReport
+
+*.log
+
+Client/client_SAVEFILE
