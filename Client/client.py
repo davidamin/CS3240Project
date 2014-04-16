@@ -7,7 +7,7 @@ import requests
 import yaml
 import os
 import time
-import json
+import urllib2
 from Queue import *
 from threading import Thread, Lock
 import threading
@@ -69,6 +69,20 @@ def job_processor(name, stop_event):
                             logging.debug("Directory Created: " + secure_filepass(job[1]))
                         elif result[0] == "400":
                             logging.error("***Authentication Failure***")
+                    elif job[0] == "Download":
+                        logging.debug("Starting download")
+                        # NOTE the stream=True parameter
+                        r = urllib2.urlopen(HOST + "download-file/" + SUID + secure_filepass(job[1]))
+                        print "hello"
+                        print os.path.join(WORKING_DIR, job[1])
+                        with open(os.path.join(WORKING_DIR, job[1]), 'wb') as f:
+                            print "hello"
+                            #f.write(r.read())
+                            #for chunk in r.iter_content(chunk_size=1024):
+                            #     if chunk: # filter out keep-alive new chunks
+                            #         f.write(chunk)
+                            #         f.flush()
+
                     PROC_QUEUE.task_done()
 
                 except:
@@ -324,6 +338,10 @@ def runtime():
     th = Thread(target=job_processor, args=("Thread",stop))
     th.setDaemon(True)
     th.start()
+
+    PROC_QUEUE.put(("Download", WORKING_DIR+"/temp.txt"))
+
+
     try:
         while True:
             synchronize()
@@ -361,7 +379,7 @@ def init():
             sign_in()
 
 if __name__ == '__main__':
-    #logging.basicConfig(level=logging.DEBUG)
-    logging.basicConfig(filename='Client_Log.log',level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
+    #logging.basicConfig(filename='Client_Log.log',level=logging.DEBUG)
     # logging.basicConfig(filename='example.log',level=logging.DEBUG)
     init()

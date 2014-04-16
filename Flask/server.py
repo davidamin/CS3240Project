@@ -39,7 +39,8 @@ app.config.update(dict(
     USERS= {}))
 
 #WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
-WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
+#WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
+WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 
 def authenticate(sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -143,7 +144,7 @@ def changepass(username, passhash, sessionhash):
 def mkdir(username):
     """Creates a directory in the user's server-side OneDir directory"""
     logging.debug("Making directory " + username + " in filestore" )
-    full_filename = os.path.join(WORKING_DIR, username)
+    full_filename = os.path.join(WORKING_DIR,'filestore', username)
     if os.path.exists(full_filename):
         return username + " already exist!"
     else:
@@ -216,6 +217,28 @@ def delete_dir(sessionhash,filepath):
         else:
             logging.debug("Dir: " + userpath + " Does not Exist.... Nothing to Delete")
             return json.dumps(("201", "OK"))
+    else:
+        logging.error("User named : " + user[1] + " Was not Authenticated")
+        return json.dumps(("400"), "BAD")
+
+
+
+@app.route('/download-file/<sessionhash>/<path:filepath>')
+def download(sessionhash, filepath):
+    user = authenticate(sessionhash)
+    logging.debug("User : " + user[1] + "downloading file : " + filepath + " .... Processing")
+
+    if (user[0]):
+        print os.path.join(WORKING_DIR, "filestore", user[1], filepath)
+        return send_file(os.path.join(WORKING_DIR, "filestore", user[1], filepath))
+        # response = make_response()
+        # response.headers['Content-Description'] = 'File Transfer'
+        # response.headers['Cache-Control'] = 'no-cache'
+        # response.headers['Content-Type'] = 'application/octet-stream'
+        # response.headers['Content-Disposition'] = 'attachment; filename=%s' % os.path.join(WORKING_DIR, "filestore", user[1], filepath)
+        # response.headers['Content-Length'] = os.path.getsize(os.path.join(WORKING_DIR, "filestore", user[1], filepath))
+
+        # return response
     else:
         logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400"), "BAD")
@@ -371,7 +394,7 @@ def view_log():
     return json.dumps(("200", commandList))
 
 if __name__ == '__main__':
-    #logging.basicConfig(level=logging.DEBUG)
-    logging.basicConfig(filename='server.log',level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
+    #logging.basicConfig(filename='server.log',level=logging.DEBUG)
     logging.info("Starting server")
     app.run(debug = True)
