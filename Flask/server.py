@@ -310,17 +310,21 @@ def stat(username):
             logging.debug("No user named : " + username + " found...")
             return json.dumps(("400","User does not exist"))
         else:
-            files = {}
-            full_filename = os.path.join(WORKING_DIR, username)
-            count = 0
-            memory = 0
-            for f in os.listdir(full_filename):
-                files[f.__str__()]= f.__sizeof__()
 
-                logging.debug(files)
-                count = count + 1
-                memory =memory + f.__sizeof__()
-            return json.dumps(("200","" + username + " has " + count.__str__()  + " files with total memory of "+ memory.__str__() + ": " + files.__str__() + ""))
+            # files = {}
+            full_filename = os.path.join(WORKING_DIR, "filestore", username)
+            result = recursealldir(os.path.join(WORKING_DIR, "filestore"), username)
+
+            print result
+            # count = 0
+            # memory = 0
+            # for f in os.listdir(full_filename):
+            #     files[f.__str__()]= f.__sizeof__()
+            #
+            #     logging.debug(files)
+            #     count = count + 1
+            #     memory =memory + f.__sizeof__()
+            # return json.dumps(("200","" + username + " has " + count.__str__()  + " files with total memory of "+ memory.__str__() + ": " + files.__str__() + ""))
 
 @app.route('/remove_user/<username>/<delfiles>')
 def remove_user(username, delfiles):

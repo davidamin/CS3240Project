@@ -286,6 +286,8 @@ def admin_menu():
     else:
         print "Unrecognized command."
 
+    admin_menu()
+
 
 def view_report():
     r = requests.get(HOST+"view_report")
