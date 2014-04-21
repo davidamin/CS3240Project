@@ -77,8 +77,8 @@ def job_processor(name, stop_event):
                         print os.path.join(WORKING_DIR, job[1])
                         with open(os.path.join(WORKING_DIR, job[1]), 'wb') as f:
                             print "hello"
-                            #f.write(r.read())
-                            #for chunk in r.iter_content(chunk_size=1024):
+                            f.write(r.read())
+                            # for chunk in r.iter_content(chunk_size=1024):
                             #     if chunk: # filter out keep-alive new chunks
                             #         f.write(chunk)
                             #         f.flush()

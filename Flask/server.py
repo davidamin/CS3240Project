@@ -9,27 +9,6 @@ import uuid
 import time
 from datetime import datetime
 from werkzeug.utils import secure_filename
-"""
-Demo of server using Flask.  Can be used by either:
-a) typing URLs into a webbrowser's address box, or
-b) by a client sending it HTTP requests. A sample client is provided, requests_client1.py.
-
-3rd party libraries to be installed:
-a) Flask
-
-Note: PyCharm allows you to create a new project for Flask.  This was created using that. Try it.
-
-This program also shows how to use logging in Python. Logging libraries are used in real software
-to provide informational messages.  Especially for servers.  See this link for more info:
-http://docs.python.org/2/howto/logging.html#logging-basic-tutorial
-
-Important: this command:   http://127.0.0.1:5000/get-file-data/somedata.txt
-requires that there be a subdirectory called 'filestore' in the folder given by the
-variable WORKING_DIR defined below.  This command will look for a file called
-'somedata.txt' in that folder. So to see this work, you must adjust WORKING_DIR,
-create the subdirectory, and put a file or files in there.
-
-"""
 
 app = Flask(__name__)
 
@@ -151,6 +130,47 @@ def mkdir(username):
         os.mkdir(full_filename)
         return "A file has been made for user " + username
 
+@app.route('/snapshot/<sessionhash>', methods=['GET', 'POST'])
+def snapshot(sessionhash):
+    if request.method == 'POST':
+
+        user = authenticate(sessionhash)
+        logging.debug("User : " + user[1] + "Snapshot Save.... Processing")
+
+        if (user[0]):
+            #data = pickle.loads(request.data)
+            db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+            with db_connect:
+                cur = db_connect.cursor()
+                date = str(datetime.now())
+                cur.execute("DELETE FROM snaps WHERE username = ?", (user[1],))
+                cur.execute("INSERT INTO snaps (username, time_stamp, snapshot) VALUES (?, ?, ?)", (user[1],date, request.data))
+
+            logging.info("User :  " + user[1] + " Updated Snapshot with time_stamp : " + date)
+            return json.dumps(("200", date))
+        else:
+            logging.error("User named : " + user[1] + " Was not Authenticated")
+            return json.dumps(("400", "BAD"))
+
+    else:
+        print request.method
+
+@app.route('/timestamp/<sessionhash>')
+def timestamp(sessionhash):
+    user = authenticate(sessionhash)
+    if (user[0]):
+        db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+        with db_connect:
+            cur = db_connect.cursor()
+            cur.execute("SELECT time_stamp FROM snaps WHERE username = ?", (user[1],))
+
+            ret = cur.fetchone()
+            logging.info("User :  " + user[1] + " Accessed Timestamp ")
+            return json.dumps(("200"), ret[0])
+    else:
+        logging.error("User named : " + user[1] + " Was not Authenticated")
+        return json.dumps(("400", "BAD"))
+    
 #upload file into user account
 @app.route('/upload-file/<sessionhash>/<path:filename>', methods=['GET', 'POST'])
 def upload_file(sessionhash,filename):
@@ -229,7 +249,7 @@ def download(sessionhash, filepath):
     logging.debug("User : " + user[1] + "downloading file : " + filepath + " .... Processing")
 
     if (user[0]):
-        print os.path.join(WORKING_DIR, "filestore", user[1], filepath)
+        # print os.path.join("filestore", user[1], filepath)
         return send_file(os.path.join(WORKING_DIR, "filestore", user[1], filepath))
         # response = make_response()
         # response.headers['Content-Description'] = 'File Transfer'
