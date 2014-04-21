@@ -20,7 +20,7 @@ HOST = 'http://127.0.0.1:5000/'
 WORKING_DIR = ""
 SUID = ""
 PROC_QUEUE = Queue()
-TIME_STAMP = time.time()
+TIME_STAMP = ""
 DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot
 SYNCRHONIZED = True
 
@@ -71,17 +71,12 @@ def job_processor(name, stop_event):
                             logging.error("***Authentication Failure***")
                     elif job[0] == "Download":
                         logging.debug("Starting download")
-                        # NOTE the stream=True parameter
                         r = urllib2.urlopen(HOST + "download-file/" + SUID + secure_filepass(job[1]))
                         print "hello"
                         print os.path.join(WORKING_DIR, job[1])
                         with open(os.path.join(WORKING_DIR, job[1]), 'wb') as f:
                             print "hello"
                             f.write(r.read())
-                            # for chunk in r.iter_content(chunk_size=1024):
-                            #     if chunk: # filter out keep-alive new chunks
-                            #         f.write(chunk)
-                            #         f.flush()
 
                     PROC_QUEUE.task_done()
 
@@ -106,11 +101,62 @@ def job_processor(name, stop_event):
                     TIME_STAMP = result[1]
                 elif result[0] == "400":
                     logging.error("***Authentication Failure***")
+        else:
+            server_sync()
+            stop_event.wait(2)
 
-        stop_event.wait(1)
+        # stop_event.wait(1)
 
 def secure_filepass(filename):
     return filename.replace(WORKING_DIR,"")
+
+def server_sync():
+    r = requests.get(HOST + "timestamp/" + SUID)
+    result = yaml.load(r.text)
+    if result[0] == "200":
+        print TIME_STAMP + " " + result[1]
+        if TIME_STAMP != result[1]:
+            logging.debug("TIME STAMP NO LONGER SAME....... NEED TO DOWNLOAD")
+            r = requests.get(HOST + "get-snapshot/" + SUID)
+            result = yaml.load(r.text)
+
+            if result[0] == "200":
+                server_snap = pickle.loads(result[1])
+                paths_given = []
+                ONCE = False
+                ROOT = ""
+                for path in server_snap.paths:
+                    # print path
+                    paths_given.append(path)
+                paths = sorted(paths_given)
+                for path in paths:
+                    if ONCE:
+                        path = path.replace(ROOT, WORKING_DIR)
+                        if os.path.exists(path) == False:
+                            # print path
+                            logging.debug("Checking if " + path + " is a directory...")
+                            r = requests.get(HOST + "is-dir/" + SUID + secure_filepass(path))
+                            result = yaml.load(r.text)
+                            if result[0] == "200":
+                                if result[1]:
+                                    logging.debug("Directory")
+                                    os.makedirs(path)
+                                else:
+                                    logging.debug("File")
+                                    PROC_QUEUE.put(("Download", path))
+                            elif result[0] == "400":
+                                logging.error("***Authentication Failure***")
+
+                    else:
+                        ONCE = True
+                        ROOT = path
+                        print "ROOT: " + ROOT
+            elif result[0] == "400":
+                logging.error("***Authentication Failure***")
+    elif result[0] == "401":
+        logging.debug("No time stamp yet.... New account")
+    elif result[0] == "400":
+        logging.error("***Authentication Failure***")
 
 class OneDirFileHandles(FileSystemEventHandler):
     def on_created(self, event):
@@ -176,7 +222,6 @@ def sign_in():
             os.mkdir(WORKING_DIR)
             logging.debug("Folder created!")
 
-        TIME_STAMP = time.time()
         DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)
         file_write = file("./client_SAVEFILE", 'w')
         yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT),file_write)
@@ -338,9 +383,6 @@ def runtime():
     th = Thread(target=job_processor, args=("Thread",stop))
     th.setDaemon(True)
     th.start()
-
-    PROC_QUEUE.put(("Download", WORKING_DIR+"/temp.txt"))
-
 
     try:
         while True:

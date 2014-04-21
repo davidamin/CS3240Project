@@ -4,6 +4,7 @@ import os
 import logging
 import sqlite3
 import uuid
+import shutil
 
 #import server_functions
 import time
@@ -155,6 +156,25 @@ def snapshot(sessionhash):
     else:
         print request.method
 
+@app.route('/get-snapshot/<sessionhash>')
+def get_snapshot(sessionhash):
+
+    user = authenticate(sessionhash)
+    logging.debug("User : " + user[1] + "Snapshot Access.... Processing")
+
+    if (user[0]):
+        db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+        with db_connect:
+            cur = db_connect.cursor()
+            cur.execute("SELECT snapshot FROM snaps WHERE username = ?", (user[1],))
+            res = cur.fetchone()
+            logging.info("User :  " + user[1] + " Downloaded Snapshot")
+            return json.dumps(("200", res[0]))
+    else:
+        logging.error("User named : " + user[1] + " Was not Authenticated")
+        return json.dumps(("400", "BAD"))
+
+
 @app.route('/timestamp/<sessionhash>')
 def timestamp(sessionhash):
     user = authenticate(sessionhash)
@@ -164,13 +184,18 @@ def timestamp(sessionhash):
             cur = db_connect.cursor()
             cur.execute("SELECT time_stamp FROM snaps WHERE username = ?", (user[1],))
 
-            ret = cur.fetchone()
-            logging.info("User :  " + user[1] + " Accessed Timestamp ")
-            return json.dumps(("200"), ret[0])
+            ret = cur.fetchall()
+            if len(ret) == 0:
+                logging.info("User: " + user[1] + " Does not have a Timestamp")
+                return json.dumps(("401", "NONE"))
+            else:
+                res = ret.pop()
+                logging.info("User :  " + user[1] + " Accessed Timestamp ")
+                return json.dumps(("200", res[0]))
     else:
         logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400", "BAD"))
-    
+
 #upload file into user account
 @app.route('/upload-file/<sessionhash>/<path:filename>', methods=['GET', 'POST'])
 def upload_file(sessionhash,filename):
@@ -232,7 +257,7 @@ def delete_dir(sessionhash,filepath):
         userpath = os.path.join(WORKING_DIR,"filestore",user[1],filepath)
         if os.path.exists(userpath):
             logging.debug("File: " + userpath + " Exists... Deleting")
-            os.removedirs(userpath)
+            shutil.rmtree(userpath)
             return json.dumps(("200", "OK"))
         else:
             logging.debug("Dir: " + userpath + " Does not Exist.... Nothing to Delete")
@@ -242,32 +267,30 @@ def delete_dir(sessionhash,filepath):
         return json.dumps(("400"), "BAD")
 
 
-
 @app.route('/download-file/<sessionhash>/<path:filepath>')
-def download(sessionhash, filepath):
+def download_file(sessionhash, filepath):
     user = authenticate(sessionhash)
     logging.debug("User : " + user[1] + "downloading file : " + filepath + " .... Processing")
 
     if (user[0]):
         # print os.path.join("filestore", user[1], filepath)
         return send_file(os.path.join(WORKING_DIR, "filestore", user[1], filepath))
-        # response = make_response()
-        # response.headers['Content-Description'] = 'File Transfer'
-        # response.headers['Cache-Control'] = 'no-cache'
-        # response.headers['Content-Type'] = 'application/octet-stream'
-        # response.headers['Content-Disposition'] = 'attachment; filename=%s' % os.path.join(WORKING_DIR, "filestore", user[1], filepath)
-        # response.headers['Content-Length'] = os.path.getsize(os.path.join(WORKING_DIR, "filestore", user[1], filepath))
-
-        # return response
     else:
         logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400"), "BAD")
 
-# #use this to send a file from user
-# @app.route('/send/<filename>', methods=['GET','POST'])
-# def send(filename):
-#     userpath = os.path.join(WORKING_DIR,filename)
-#     return send_file(userpath, as_attachment=True)
+@app.route('/is-dir/<sessionhash>/<path:filepath>')
+def is_dir(sessionhash, filepath):
+    user = authenticate(sessionhash)
+
+    logging.debug("User : " + user[1] + "checking if directory : " + filepath + " .... Processing")
+
+    if (user[0]):
+        # print os.path.join("filestore", user[1], filepath)
+        return json.dumps(("200", os.path.isdir(os.path.join(WORKING_DIR, "filestore", user[1],filepath))))
+    else:
+        logging.error("User named : " + user[1] + " Was not Authenticated")
+        return json.dumps(("400"), "BAD")
 
 
 def recursealldir(path, filename):
