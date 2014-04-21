@@ -19,9 +19,8 @@ app.config.update(dict(
     USERS= {}))
 
 #WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
-#WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
-WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
-#WORKING_DIR = '/home/david/WindowsFolder/Documents/GitHub/CS3240Project'
+WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
+#WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 
 def authenticate(sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -336,9 +335,15 @@ def stat(username):
         else:
             # files = {}
             full_filename = os.path.join(WORKING_DIR, "filestore", username)
-            result = recursealldir(os.path.join(WORKING_DIR, "filestore"), username)
+            string = recursealldir(os.path.join(WORKING_DIR, "filestore"), username)
+            foldercount = string.count("{")-1
+            filescount = string.count(":") - foldercount
+            totalsize = os.path.getsize(full_filename)
+            result = "User: " +username + " [ Folder count: " + str(foldercount) \
+                   + " , File count:" + str(filescount) + ", Total size: "+ str(totalsize) + "]"
 
-            print result
+            return json.dumps(("200",result))
+
 
 @app.route('/remove_user/<username>/<delfiles>')
 def remove_user(username, delfiles):
