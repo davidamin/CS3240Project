@@ -15,6 +15,7 @@ NEED TWO "EXTRA" STORIES:
 -Saved Client Login, could add list
 -Allow/Disallow extensions
 Can add more if time permits
+Our sessions/ hasing passwords/ authenticating users might count as well
 
 POLISH:
 -Return a more nicely formatted list for users/server log/ etc
