@@ -75,7 +75,7 @@ def job_processor(name, stop_event):
                         print "hello"
                         print os.path.join(WORKING_DIR, job[1])
                         with open(os.path.join(WORKING_DIR, job[1]), 'wb') as f:
-                            print "hello"
+                            #print "hello"
                             f.write(r.read())
 
                     PROC_QUEUE.task_done()
@@ -180,6 +180,18 @@ class OneDirFileHandles(FileSystemEventHandler):
 
             PROC_QUEUE.put(("Delete", event.src_path))
             PROC_QUEUE.put(("Upload", event.src_path))
+
+    def on_moved(self,event):
+        if event.is_directory:
+            logging.debug("Directory: " + event.src_path + " has been modified locally.")
+
+            PROC_QUEUE.put(("Remove Dir", event.src_path))
+            PROC_QUEUE.put(("New Dir", event.dest_path))
+        else:
+            logging.debug("File: " + event.src_path + " has been modified locally.")
+
+            PROC_QUEUE.put(("Delete", event.src_path))
+            PROC_QUEUE.put(("Upload", event.dest_path))
 
     def on_deleted(self, event):
         if event.is_directory:
