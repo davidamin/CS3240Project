@@ -13,14 +13,14 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+ALLOWED_EXTENSIONS = set(['.txt', '.pdf', '.png', '.jpg', '.jpeg', '.gif'])
 app.config.update(dict(
     DATABASE='database.db',
     USERS= {}))
 
 #WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
-#WORKING_DIR = '/home/david/WindowsFolder/Documents/GitHub/CS3240Project'
-WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
+WORKING_DIR = '/home/david/WindowsFolder/Documents/GitHub/CS3240Project'
+#WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
 #WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 
 def authenticate(sessionhash):
@@ -70,6 +70,7 @@ def signup(username, passhash):
             logging.debug("No user named : " + username + " found... Creating...")
             cur.execute("INSERT INTO users (username, passhash, user_role) VALUES (?, ?, ?)", (username, passhash, 0))
             mkdir(username)
+            mkdir(os.path.join(username,"shared"))
             return json.dumps(("200", "GOOD"))
         else:
             logging.debug("User named : " + username + " found. Aborting Signup")
@@ -213,7 +214,7 @@ def upload_file(sessionhash,filename):
         logging.debug("User : " + user[1] + "New File : " + filename + " .... Processing")
 
         if not(allowed_file(filename)):
-            logging.debug("Invalid File Type error encountered")
+            logging.debug("Invalid File Type error encountered on " + filename)
             return json.dumps(("400"), "BAD")
 
         if (user[0]):

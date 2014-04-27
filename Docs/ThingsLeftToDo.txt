@@ -10,10 +10,10 @@ PROBLEMS:
 -Sync kind of works, kind of doesn't. More testing to come
 
 NEED TWO "EXTRA" STORIES:
--Download Links(generate a link that will allow for a file download)
--Saved Client Login, could add list
--Allow/Disallow extensions
+-Saved Client Login works, could add list
 -Our sessions/ hashing passwords/ authenticating users might count as well
+-Done with download links, of form download-link/<username>/<file in shared folder>
+-Done with allow/disallow extensions. Only checks on upload, but that should be enough. Simply disallows upload of any file that isn't a valid one.
 Can add more if time permits
 
 TEST:
