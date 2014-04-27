@@ -171,12 +171,12 @@ def server_sync():
                 for dir in snap_diff.dirs_created:
                     logging.debug("Directory: " + dir.replace(server_dir,"") + " has been created remotely.")
 
-                    os.mkdir(os.path.join(WORKING_DIR,dir.replace(server_dir,"")))
+                    os.mkdir(dir.replace(server_dir,WORKING_DIR))
 
                 for dir in snap_diff.dirs_deleted:
                     logging.debug("Directory: " + dir + " has been deleted remotely.")
 
-                    os.removedirs(os.path.join(WORKING_DIR,dir.replace(server_dir,"")))
+                    os.removedirs(dir.replace(server_dir,WORKING_DIR))
 
                 for dir in snap_diff.dirs_modified:
                     logging.debug("Directory: " + dir + " has been modified remotely.")
@@ -184,7 +184,7 @@ def server_sync():
                 for dir in snap_diff.dirs_moved:
                     logging.debug("Directory: " + dir[0] + " has been RENAMED remotely.")
 
-                    os.rename(os.path.join(WORKING_DIR,dir[0].replace(server_dir,"")),os.path.join(WORKING_DIR,dir[1].replace(server_dir,"")))
+                    os.rename(dir[0].replace(server_dir,WORKING_DIR),dir[1].replace(server_dir,WORKING_DIR))
 
                 for file in snap_diff.files_created:
                     logging.debug("File: " + file + " has been created remotely.")
@@ -194,19 +194,18 @@ def server_sync():
                 for file in snap_diff.files_deleted:
                     logging.debug("File: " + file + " has been deleted remotely.")
 
-                    os.remove(os.path.join(WORKING_DIR,file.replace(server_dir,"")))
+                    os.remove(file.replace(server_dir,WORKING_DIR))
 
                 for file in snap_diff.files_modified:
                     logging.debug("File: " + file + " has been modified remotely.")
-                    temp = file.replace(server_dir,WORKING_DIR)
-                    print temp
-                    os.remove(temp)
+                    #temp = file.replace(server_dir,WORKING_DIR)
+                    os.remove(file.replace(server_dir,WORKING_DIR))
                     PROC_QUEUE.put(("Download", file.replace(server_dir,WORKING_DIR)))
 
                 for file in snap_diff.files_moved:
                     logging.debug("File: " + file[0] + " has been RENAMED remotely.")
 
-                    os.rename(os.path.join(WORKING_DIR,dir[0].replace(server_dir,"")),os.path.join(WORKING_DIR,dir[1].replace(server_dir,"")))
+                    os.rename(file[0].replace(server_dir,WORKING_DIR),file[1].replace(server_dir,WORKING_DIR))
 
             elif result[0] == "400":
                 logging.error("***Authentication Failure***")
