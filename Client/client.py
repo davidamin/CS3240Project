@@ -75,7 +75,7 @@ def job_processor(name, stop_event):
                         print "hello"
                         print os.path.join(WORKING_DIR, job[1])
                         with open(os.path.join(WORKING_DIR, job[1]), 'wb') as f:
-                            print "hello"
+                            #print "hello"
                             f.write(r.read())
 
                     PROC_QUEUE.task_done()
