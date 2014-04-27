@@ -18,7 +18,6 @@ Can add more if time permits
 Our sessions/ hasing passwords/ authenticating users might count as well
 
 POLISH:
--Return a more nicely formatted list for users/server log/ etc
 -Log needs to be more user friendly in the console, the actual file can still be detailed
 
 TEST:

@@ -357,7 +357,10 @@ def view_report():
         print "Unsuccesful retrieval of user list"
     else:
         logging.debug("Succesfully retrieved user list")
-        print result[1]
+        userlist = result[1]
+        print "USERS:"
+        for users in userlist:
+            print users
 
 def view_log():
     r = requests.get(HOST+"view_log")
@@ -368,7 +371,10 @@ def view_log():
         print "Unsuccesful retrieval of server log"
     else:
         logging.debug("Succesfully retrieved server log")
-        print result[1]
+        log = result[1]
+        print "Recent Server Activity:"
+        for activity in log:
+            print activity
 
 def runtime():
     print "Setup Complete: Intializing OneDir! Enjoy your day!"
