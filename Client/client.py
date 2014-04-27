@@ -111,10 +111,13 @@ def secure_filepass(filename):
     return filename.replace(WORKING_DIR,"")
 
 def server_sync():
+    global TIME_STAMP
+    temp_TIME_STAMP = ""
     r = requests.get(HOST + "timestamp/" + SUID)
     result = yaml.load(r.text)
     if result[0] == "200":
         print TIME_STAMP + " " + result[1]
+        temp_TIME_STAMP = result[1]
         if TIME_STAMP != result[1]:
             logging.debug("TIME STAMP NO LONGER SAME....... NEED TO DOWNLOAD")
             r = requests.get(HOST + "get-snapshot/" + SUID)
@@ -132,6 +135,7 @@ def server_sync():
                 for path in paths:
                     if ONCE:
                         path = path.replace(ROOT, WORKING_DIR)
+                        print path
                         if os.path.exists(path) == False:
                             # print path
                             logging.debug("Checking if " + path + " is a directory...")
@@ -146,6 +150,9 @@ def server_sync():
                                     PROC_QUEUE.put(("Download", path))
                             elif result[0] == "400":
                                 logging.error("***Authentication Failure***")
+                        else:
+                            logging.debug("File or Directory Exists... Assigning Timestamp")
+                            TIME_STAMP = temp_TIME_STAMP
 
                     else:
                         ONCE = True
@@ -230,8 +237,13 @@ def sign_in():
         logging.debug("Making directory " + WORKING_DIR + " for User " + username )
         if os.path.exists(WORKING_DIR):
             logging.debug("Folder already exists!")
+            if(os.path.exists(os.path.join(WORKING_DIR,"shared"))):
+                logging.debug("Shared folder already exists!")
+            else:
+                os.mkdir(os.path.join(WORKING_DIR,"shared"))
         else:
             os.mkdir(WORKING_DIR)
+            os.mkdir(os.path.join(WORKING_DIR,"shared"))
             logging.debug("Folder created!")
 
         DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)

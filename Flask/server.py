@@ -280,6 +280,17 @@ def download_file(sessionhash, filepath):
         logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400"), "BAD")
 
+@app.route('/download-link/<username>/<path:filepath>')
+def download_link(username, filepath):
+    print os.path.join(WORKING_DIR, "filestore" , username, "shared", filepath)
+    if (True):
+        # print os.path.join("filestore", user[1], filepath)
+        return send_file(os.path.join(WORKING_DIR, "filestore" , username, "shared", filepath), as_attachment=True)
+    else:
+        logging.error("Path to file was invalid")
+        logging.error(os.path.join(WORKING_DIR, "filestore", filepath))
+        return json.dumps(("400"), "BAD")
+
 @app.route('/is-dir/<sessionhash>/<path:filepath>')
 def is_dir(sessionhash, filepath):
     user = authenticate(sessionhash)
