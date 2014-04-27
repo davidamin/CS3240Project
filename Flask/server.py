@@ -51,6 +51,13 @@ def is_Admin(sessionhash):
     else:
         return False
 
+def allowed_file(filename):
+    pathandname, extens = os.path.splitext(filename)
+    if extens in ALLOWED_EXTENSIONS:
+        return True
+    else:
+        return False
+
 @app.route('/signup/<username>/<passhash>')
 def signup(username, passhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -205,6 +212,10 @@ def upload_file(sessionhash,filename):
         user = authenticate(sessionhash)
         logging.debug("User : " + user[1] + "New File : " + filename + " .... Processing")
 
+        if not(allowed_file(filename)):
+            logging.debug("Invalid File Type error encountered")
+            return json.dumps(("400"), "BAD")
+
         if (user[0]):
             file = request.files['file']
             userpath = os.path.join(WORKING_DIR,"filestore",user[1])
@@ -284,8 +295,9 @@ def download_file(sessionhash, filepath):
 
 @app.route('/download-link/<username>/<path:filepath>')
 def download_link(username, filepath):
-    print os.path.join(WORKING_DIR, "filestore" , username, "shared", filepath)
-    if (True):
+    #print os.path.join(WORKING_DIR, "filestore" , username, "shared", filepath)
+
+    if (os.path.exists(os.path.join(WORKING_DIR, "filestore" , username, "shared", filepath))):
         # print os.path.join("filestore", user[1], filepath)
         return send_file(os.path.join(WORKING_DIR, "filestore" , username, "shared", filepath), as_attachment=True)
     else:
