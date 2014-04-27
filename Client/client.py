@@ -94,6 +94,7 @@ def job_processor(name, stop_event):
                 file_write = file("./client_SAVEFILE", 'w')
                 yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT),file_write)
                 send = pickle.dumps(DIR_SNAPSHOT)
+                # Change this line.. Once it's correct.
                 r = requests.post(HOST + "snapshot/" + SUID, data=send)
                 result = yaml.load(r.text)
                 if result[0] == "200":
@@ -103,6 +104,7 @@ def job_processor(name, stop_event):
                     logging.error("***Authentication Failure***")
         else:
             server_sync()
+            local_sync()
             stop_event.wait(2)
 
         # stop_event.wait(1)
@@ -164,50 +166,102 @@ def server_sync():
     elif result[0] == "400":
         logging.error("***Authentication Failure***")
 
-class OneDirFileHandles(FileSystemEventHandler):
-    def on_created(self, event):
-        if event.is_directory:
-            logging.debug("Directory: " + event.src_path + " has been created locally.")
+def local_sync():
+    TEMP_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)
 
-            PROC_QUEUE.put(("New Dir", event.src_path))
-        else:
-            logging.debug("File: " + event.src_path + " has been created locally.")
+    diff = dirsnapshot.DirectorySnapshotDiff(DIR_SNAPSHOT,TEMP_SNAPSHOT)
 
-            PROC_QUEUE.put(("Upload", event.src_path))
+    for dir in diff.dirs_created:
+        logging.debug("Directory: " + dir + " has been created locally.")
 
-    def on_modified(self, event):
-        if event.is_directory:
-            logging.debug("Directory: " + event.src_path + " has been modified locally.")
+        PROC_QUEUE.put(("New Dir", dir))
 
-            PROC_QUEUE.put(("Remove Dir", event.src_path))
-            PROC_QUEUE.put(("New Dir", event.src_path))
-        else:
-            logging.debug("File: " + event.src_path + " has been modified locally.")
+    for dir in diff.dirs_deleted:
+        logging.debug("Directory: " + dir + " has been deleted locally.")
 
-            PROC_QUEUE.put(("Delete", event.src_path))
-            PROC_QUEUE.put(("Upload", event.src_path))
+        PROC_QUEUE.put(("Remove Dir", dir))
 
-    def on_moved(self,event):
-        if event.is_directory:
-            logging.debug("Directory: " + event.src_path + " has been modified locally.")
+    for dir in diff.dirs_modified:
+        logging.debug("Directory: " + dir + " has been modified locally.")
 
-            PROC_QUEUE.put(("Remove Dir", event.src_path))
-            PROC_QUEUE.put(("New Dir", event.dest_path))
-        else:
-            logging.debug("File: " + event.src_path + " has been modified locally.")
+        PROC_QUEUE.put(("Remove Dir", dir))
+        PROC_QUEUE.put(("New Dir", dir))
 
-            PROC_QUEUE.put(("Delete", event.src_path))
-            PROC_QUEUE.put(("Upload", event.dest_path))
+    for dir in diff.dirs_moved:
+        logging.debug("Directory: " + dir[0] + " has been RENAMED locally.")
 
-    def on_deleted(self, event):
-        if event.is_directory:
-            logging.debug("Directory: " + event.src_path + " has been deleted locally.")
+        PROC_QUEUE.put(("Remove Dir", dir[0]))
+        PROC_QUEUE.put(("New Dir", dir[1]))
 
-            PROC_QUEUE.put(("Remove Dir", event.src_path))
-        else:
-            logging.debug("File: " + event.src_path + " has been deleted locally.")
+    for file in diff.files_created:
+        logging.debug("File: " + file + " has been created locally.")
 
-            PROC_QUEUE.put(("Delete", event.src_path))
+        PROC_QUEUE.put(("Upload", file))
+
+    for file in diff.files_deleted:
+        logging.debug("File: " + file + " has been deleted locally.")
+
+        PROC_QUEUE.put(("Delete", file))
+
+    for file in diff.files_modified:
+        logging.debug("File: " + file + " has been modified locally.")
+
+        PROC_QUEUE.put(("Delete", file))
+        PROC_QUEUE.put(("Upload", file))
+
+    for file in diff.files_moved:
+        logging.debug("File: " + file[0] + " has been RENAMED locally.")
+
+        PROC_QUEUE.put(("Delete", file[0]))
+        PROC_QUEUE.put(("Upload", file[1]))
+
+
+
+#class OneDirFileHandles(FileSystemEventHandler):
+
+    # def on_created(self, event):
+    #     # if event.is_directory:
+    #     #     logging.debug("Directory: " + event.src_path + " has been created locally.")
+    #     #
+    #     #     PROC_QUEUE.put(("New Dir", event.src_path))
+    #     # else:
+    #     #     logging.debug("File: " + event.src_path + " has been created locally.")
+    #     #
+    #     #     PROC_QUEUE.put(("Upload", event.src_path))
+    #
+    # def on_modified(self, event):
+    #     if event.is_directory:
+    #         logging.debug("Directory: " + event.src_path + " has been modified locally.")
+    #
+    #         PROC_QUEUE.put(("Remove Dir", event.src_path))
+    #         PROC_QUEUE.put(("New Dir", event.src_path))
+    #     else:
+    #         logging.debug("File: " + event.src_path + " has been modified locally.")
+    #
+    #         PROC_QUEUE.put(("Delete", event.src_path))
+    #         PROC_QUEUE.put(("Upload", event.src_path))
+    #
+    # def on_moved(self,event):
+    #     if event.is_directory:
+    #         logging.debug("Directory: " + event.src_path + " has been modified locally.")
+    #
+    #         PROC_QUEUE.put(("Remove Dir", event.src_path))
+    #         PROC_QUEUE.put(("New Dir", event.dest_path))
+    #     else:
+    #         logging.debug("File: " + event.src_path + " has been modified locally.")
+    #
+    #         PROC_QUEUE.put(("Delete", event.src_path))
+    #         PROC_QUEUE.put(("Upload", event.dest_path))
+    #
+    # def on_deleted(self, event):
+    #     if event.is_directory:
+    #         logging.debug("Directory: " + event.src_path + " has been deleted locally.")
+    #
+    #         PROC_QUEUE.put(("Remove Dir", event.src_path))
+    #     else:
+    #         logging.debug("File: " + event.src_path + " has been deleted locally.")
+    #
+    #         PROC_QUEUE.put(("Delete", event.src_path))
 
 def new_user():
     print "Creating new account. Please fill out the following details:"
@@ -396,7 +450,7 @@ def view_log():
 
 def runtime():
     print "Setup Complete: Intializing OneDir! Enjoy your day!"
-    event_handler = OneDirFileHandles()
+    event_handler = FileSystemEventHandler()
     observer = Observer()
     #print WORKING_DIR
 
