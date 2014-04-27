@@ -111,10 +111,13 @@ def secure_filepass(filename):
     return filename.replace(WORKING_DIR,"")
 
 def server_sync():
+    global TIME_STAMP
+    temp_TIME_STAMP = ""
     r = requests.get(HOST + "timestamp/" + SUID)
     result = yaml.load(r.text)
     if result[0] == "200":
         print TIME_STAMP + " " + result[1]
+        temp_TIME_STAMP = TIME_STAMP
         if TIME_STAMP != result[1]:
             logging.debug("TIME STAMP NO LONGER SAME....... NEED TO DOWNLOAD")
             r = requests.get(HOST + "get-snapshot/" + SUID)
@@ -146,6 +149,9 @@ def server_sync():
                                     PROC_QUEUE.put(("Download", path))
                             elif result[0] == "400":
                                 logging.error("***Authentication Failure***")
+                        else:
+                            logging.debug("File or Directory Exists... Assigning Timestamp")
+                            TIME_STAMP = temp_TIME_STAMP
 
                     else:
                         ONCE = True

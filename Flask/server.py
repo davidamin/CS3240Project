@@ -472,4 +472,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     #logging.basicConfig(filename='server.log',level=logging.DEBUG)
     logging.info("Starting server")
-    app.run(debug = True)
+    app.run(debug = True, host='0.0.0.0')
