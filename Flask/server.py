@@ -19,8 +19,8 @@ app.config.update(dict(
     USERS= {}))
 
 #WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
-#WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
-WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
+WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
+#WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask's
 
 def authenticate(sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -323,6 +323,7 @@ def recursealldir(path, filename):
 
 @app.route('/stat/<username>')
 def stat(username):
+
     """Returns the size and number of files stored in a directory on the server"""
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
@@ -344,6 +345,30 @@ def stat(username):
 
             return json.dumps(("200",result))
 
+@app.route('/userstat')
+def userstat():
+    db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+    stat_list = []
+    with db_connect:
+        cur = db_connect.cursor()
+        cur.execute("SELECT username FROM users ", ())
+        user_list = []
+        results = cur.fetchall()
+        for uniresults in results:
+            unistr = uniresults[0]
+            user_list.append(unistr.encode('ascii','ignore'))
+        for s in user_list:
+            full_filename = os.path.join(WORKING_DIR, "filestore", s)
+            string = recursealldir(os.path.join(WORKING_DIR, "filestore"), s)
+            foldercount = string.count("{")-1
+            filescount = string.count(":") - foldercount
+            totalsize = os.path.getsize(full_filename)
+            result = "Username: " +s + " [ Folder count: " + str(foldercount) \
+                   + " , File count: " + str(filescount) + ", Total size: "+ str(totalsize) + "]"
+            print result
+            stat_list.append(result)
+
+    return json.dumps(("400",stat_list))
 
 @app.route('/remove_user/<username>/<delfiles>')
 def remove_user(username, delfiles):
