@@ -5,6 +5,8 @@ import logging
 import sqlite3
 import uuid
 import shutil
+import pickle
+from watchdog.utils import dirsnapshot
 
 #import server_functions
 import time
@@ -63,7 +65,13 @@ def signup(username, passhash):
             logging.debug("No user named : " + username + " found... Creating...")
             cur.execute("INSERT INTO users (username, passhash, user_role) VALUES (?, ?, ?)", (username, passhash, 0))
             mkdir(username)
-            return json.dumps(("200", "GOOD"))
+            snapshot = pickle.dumps(dirsnapshot.DirectorySnapshot(os.path.join(WORKING_DIR,'filestore',username)))
+
+            date = str(datetime.now())
+            #cur.execute("DELETE FROM snaps WHERE username = ?", (user[1],))
+            cur.execute("INSERT INTO snaps (username, time_stamp, snapshot) VALUES (?, ?, ?)", (username,date, snapshot))
+
+            return json.dumps(("200", date))
         else:
             logging.debug("User named : " + username + " found. Aborting Signup")
             return json.dumps(("404", "BAD"))
@@ -132,48 +140,53 @@ def mkdir(username):
         os.mkdir(full_filename)
         return "A file has been made for user " + username
 
-@app.route('/snapshot/<sessionhash>', methods=['GET', 'POST'])
+@app.route('/snapshot/<sessionhash>')
 def snapshot(sessionhash):
-    if request.method == 'POST':
-
-        user = authenticate(sessionhash)
-        logging.debug("User : " + user[1] + "Snapshot Save.... Processing")
-
-        if (user[0]):
-            #data = pickle.loads(request.data)
-            db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
-            with db_connect:
-                cur = db_connect.cursor()
-                date = str(datetime.now())
-                cur.execute("DELETE FROM snaps WHERE username = ?", (user[1],))
-                cur.execute("INSERT INTO snaps (username, time_stamp, snapshot) VALUES (?, ?, ?)", (user[1],date, request.data))
-
-            logging.info("User :  " + user[1] + " Updated Snapshot with time_stamp : " + date)
-            return json.dumps(("200", date))
-        else:
-            logging.error("User named : " + user[1] + " Was not Authenticated")
-            return json.dumps(("400", "BAD"))
-
-    else:
-        print request.method
-
-@app.route('/get-snapshot/<sessionhash>')
-def get_snapshot(sessionhash):
-
     user = authenticate(sessionhash)
-    logging.debug("User : " + user[1] + "Snapshot Access.... Processing")
+    logging.debug("User : " + user[1] + "Snapshot Save.... Processing")
 
     if (user[0]):
+        #data = pickle.loads(request.data)
+        snapshot = dirsnapshot.DirectorySnapshot(os.path.join(WORKING_DIR, 'filestore',user[1]),recursive=True)
         db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
         with db_connect:
             cur = db_connect.cursor()
-            cur.execute("SELECT snapshot FROM snaps WHERE username = ?", (user[1],))
-            res = cur.fetchone()
-            logging.info("User :  " + user[1] + " Downloaded Snapshot")
-            return json.dumps(("200", res[0]))
+            date = str(datetime.now())
+            #cur.execute("DELETE FROM snaps WHERE username = ?", (user[1],))
+            cur.execute("INSERT INTO snaps (username, time_stamp, snapshot) VALUES (?, ?, ?)", (user[1],date, pickle.dumps(snapshot)))
+
+        logging.info("User :  " + user[1] + " Updated Snapshot with time_stamp : " + date)
+        return json.dumps(("200", date))
     else:
         logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400", "BAD"))
+
+
+@app.route('/get-snapshot/<sessionhash>', methods=['GET', 'POST'])
+def get_snapshot(sessionhash):
+    if request.method == 'POST':
+        user = authenticate(sessionhash)
+        logging.debug("User : " + user[1] + "Snapshot Access.... Processing")
+
+        if (user[0]):
+            db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
+            timestamp = request.data
+            with db_connect:
+                cur = db_connect.cursor()
+                if timestamp == "new":
+                    cur.execute("SELECT snapshot, time_stamp FROM snaps WHERE username = ? ORDER BY time_stamp ASC", (user[1],))
+                else:
+                    cur.execute("SELECT snapshot, time_stamp FROM snaps WHERE username = ? AND time_stamp = ?", (user[1],timestamp))
+                res = cur.fetchone()
+                ref_snapshot = pickle.loads(res[0])
+                serv_snapshot = dirsnapshot.DirectorySnapshot(os.path.join(WORKING_DIR, 'filestore',user[1]),recursive=True)
+
+                diff = dirsnapshot.DirectorySnapshotDiff(ref_snapshot,serv_snapshot)
+                logging.info("User :  " + user[1] + " Downloaded Snapshot")
+                return json.dumps(("200", WORKING_DIR, pickle.dumps(diff), res[1]))
+        else:
+            logging.error("User named : " + user[1] + " Was not Authenticated")
+            return json.dumps(("400", "BAD"))
 
 
 @app.route('/timestamp/<sessionhash>')
@@ -183,7 +196,7 @@ def timestamp(sessionhash):
         db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
         with db_connect:
             cur = db_connect.cursor()
-            cur.execute("SELECT time_stamp FROM snaps WHERE username = ?", (user[1],))
+            cur.execute("SELECT time_stamp FROM snaps WHERE username = ? ORDER BY time_stamp DESC", (user[1],))
 
             ret = cur.fetchall()
             if len(ret) == 0:

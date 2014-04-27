@@ -70,6 +70,7 @@ def job_processor(name, stop_event):
                         elif result[0] == "400":
                             logging.error("***Authentication Failure***")
                     elif job[0] == "Download":
+                        SAVE = False
                         logging.debug("Starting download")
                         r = urllib2.urlopen(HOST + "download-file/" + SUID + secure_filepass(job[1]))
                         print "hello"
@@ -93,9 +94,9 @@ def job_processor(name, stop_event):
                 DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)
                 file_write = file("./client_SAVEFILE", 'w')
                 yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT),file_write)
-                send = pickle.dumps(DIR_SNAPSHOT)
+                #send = pickle.dumps(DIR_SNAPSHOT)
                 # Change this line.. Once it's correct.
-                r = requests.post(HOST + "snapshot/" + SUID, data=send)
+                r = requests.get(HOST + "snapshot/" + SUID)
                 result = yaml.load(r.text)
                 if result[0] == "200":
                     logging.debug("Snapshot saved. Timestamp updated to: " + result[1])
@@ -122,43 +123,92 @@ def server_sync():
         temp_TIME_STAMP = TIME_STAMP
         if TIME_STAMP != result[1]:
             logging.debug("TIME STAMP NO LONGER SAME....... NEED TO DOWNLOAD")
-            r = requests.get(HOST + "get-snapshot/" + SUID)
+            if (TIME_STAMP == ''):
+                r = requests.post(HOST + "get-snapshot/" + SUID,data='new')
+            else:
+                r = requests.post(HOST + "get-snapshot/" + SUID, data=TIME_STAMP)
             result = yaml.load(r.text)
 
             if result[0] == "200":
-                server_snap = pickle.loads(result[1])
-                paths_given = []
-                ONCE = False
-                ROOT = ""
-                for path in server_snap.paths:
-                    # print path
-                    paths_given.append(path)
-                paths = sorted(paths_given)
-                for path in paths:
-                    if ONCE:
-                        path = path.replace(ROOT, WORKING_DIR)
-                        if os.path.exists(path) == False:
-                            # print path
-                            logging.debug("Checking if " + path + " is a directory...")
-                            r = requests.get(HOST + "is-dir/" + SUID + secure_filepass(path))
-                            result = yaml.load(r.text)
-                            if result[0] == "200":
-                                if result[1]:
-                                    logging.debug("Directory")
-                                    os.makedirs(path)
-                                else:
-                                    logging.debug("File")
-                                    PROC_QUEUE.put(("Download", path))
-                            elif result[0] == "400":
-                                logging.error("***Authentication Failure***")
-                        else:
-                            logging.debug("File or Directory Exists... Assigning Timestamp")
-                            TIME_STAMP = temp_TIME_STAMP
+                # server_snap = pickle.loads(result[1])
+                # paths_given = []
+                # ONCE = False
+                # ROOT = ""
+                # for path in server_snap.paths:
+                #     # print path
+                #     paths_given.append(path)
+                # paths = sorted(paths_given)
+                # for path in paths:
+                #     if ONCE:
+                #         path = path.replace(ROOT, WORKING_DIR)
+                #         if os.path.exists(path) == False:
+                #             # print path
+                #             logging.debug("Checking if " + path + " is a directory...")
+                #             r = requests.get(HOST + "is-dir/" + SUID + secure_filepass(path))
+                #             result = yaml.load(r.text)
+                #             if result[0] == "200":
+                #                 if result[1]:
+                #                     logging.debug("Directory")
+                #                     os.makedirs(path)
+                #                 else:
+                #                     logging.debug("File")
+                #                     PROC_QUEUE.put(("Download", path))
+                #             elif result[0] == "400":
+                #                 logging.error("***Authentication Failure***")
+                #         else:
+                #             logging.debug("File or Directory Exists... Assigning Timestamp")
+                #             TIME_STAMP = temp_TIME_STAMP
+                #
+                #     else:
+                #         ONCE = True
+                #         ROOT = path
+                #         print "ROOT: " + ROOT
 
-                    else:
-                        ONCE = True
-                        ROOT = path
-                        print "ROOT: " + ROOT
+                server_dir = result[1]
+                snap_diff = pickle.loads(result[2])
+                TIME_STAMP = result[3]
+
+                for dir in snap_diff.dirs_created:
+                    logging.debug("Directory: " + dir.replace(server_dir,"") + " has been created remotely.")
+
+                    os.mkdir(os.path.join(WORKING_DIR,dir.replace(server_dir,"")))
+
+                for dir in snap_diff.dirs_deleted:
+                    logging.debug("Directory: " + dir + " has been deleted remotely.")
+
+                    os.removedirs(os.path.join(WORKING_DIR,dir.replace(server_dir,"")))
+
+                for dir in snap_diff.dirs_modified:
+                    logging.debug("Directory: " + dir + " has been modified remotely.")
+
+                for dir in snap_diff.dirs_moved:
+                    logging.debug("Directory: " + dir[0] + " has been RENAMED remotely.")
+
+                    os.rename(os.path.join(WORKING_DIR,dir[0].replace(server_dir,"")),os.path.join(WORKING_DIR,dir[1].replace(server_dir,"")))
+
+                for file in snap_diff.files_created:
+                    logging.debug("File: " + file + " has been created remotely.")
+
+                    PROC_QUEUE.put(("Download", file.replace(server_dir,WORKING_DIR)))
+
+                for file in snap_diff.files_deleted:
+                    logging.debug("File: " + file + " has been deleted remotely.")
+
+                    os.remove(os.path.join(WORKING_DIR,file.replace(server_dir,"")))
+
+                for file in snap_diff.files_modified:
+                    logging.debug("File: " + file + " has been modified remotely.")
+
+                    os.remove(os.path.join(WORKING_DIR,file.replace(server_dir,"")))
+                    PROC_QUEUE.put(("Download", file.replace(server_dir,WORKING_DIR)))
+
+                for file in snap_diff.files_moved:
+                    logging.debug("File: " + file[0] + " has been RENAMED remotely.")
+
+                    os.rename(os.path.join(WORKING_DIR,dir[0].replace(server_dir,"")),os.path.join(WORKING_DIR,dir[1].replace(server_dir,"")))
+
+
+
             elif result[0] == "400":
                 logging.error("***Authentication Failure***")
     elif result[0] == "401":
@@ -270,6 +320,7 @@ def new_user():
     confirm = hashlib.sha256(raw_input('Confirm Password: ')).hexdigest()
     if password == confirm :
         r = requests.get(HOST + "signup/" + username + "/" + password)
+        result = yaml.load(r.text)
     init()
 
 def sign_in():
