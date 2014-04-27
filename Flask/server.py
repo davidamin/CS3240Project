@@ -20,8 +20,8 @@ app.config.update(dict(
 
 #WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
 #WORKING_DIR = '/home/david/WindowsFolder/Documents/GitHub/CS3240Project'
-#WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
-WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
+WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
+#WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 
 def authenticate(sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -268,6 +268,8 @@ def delete_dir(sessionhash,filepath):
         return json.dumps(("400"), "BAD")
 
 
+
+
 @app.route('/download-file/<sessionhash>/<path:filepath>')
 def download_file(sessionhash, filepath):
     user = authenticate(sessionhash)
@@ -275,7 +277,7 @@ def download_file(sessionhash, filepath):
 
     if (user[0]):
         # print os.path.join("filestore", user[1], filepath)
-        return send_file(os.path.join(WORKING_DIR, "filestore", user[1], filepath))
+        return send_file(os.path.join(WORKING_DIR, "filestore", user[1], filepath),as_attachment=True)
     else:
         logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400"), "BAD")
@@ -332,7 +334,6 @@ def recursealldir(path, filename):
     return newstr
                 #return subdirectory to add to files
 
-
 @app.route('/stat/<username>')
 def stat(username):
 
@@ -370,17 +371,18 @@ def userstat():
             unistr = uniresults[0]
             user_list.append(unistr.encode('ascii','ignore'))
         for s in user_list:
-            full_filename = os.path.join(WORKING_DIR, "filestore", s)
-            string = recursealldir(os.path.join(WORKING_DIR, "filestore"), s)
-            foldercount = string.count("{")-1
-            filescount = string.count(":") - foldercount
-            totalsize = os.path.getsize(full_filename)
-            result = "Username: " +s + " [ Folder count: " + str(foldercount) \
-                   + " , File count: " + str(filescount) + ", Total size: "+ str(totalsize) + "]"
-            print result
-            stat_list.append(result)
+            if ( s != "admin"):
+                full_filename = os.path.join(WORKING_DIR, "filestore", s)
+                string = recursealldir(os.path.join(WORKING_DIR, "filestore"), s)
+                foldercount = string.count("{")-1
+                filescount = string.count(":") - foldercount
+                totalsize = os.path.getsize(full_filename)
+                result = "Username: " +s + " [ Folder count: " + str(foldercount) \
+                       + " , File count: " + str(filescount) + ", Total size: "+ str(totalsize) + "]"
+                print result
+                stat_list.append(result)
 
-    return json.dumps(("400",stat_list))
+    return json.dumps(("200",stat_list))
 
 @app.route('/remove_user/<username>/<delfiles>')
 def remove_user(username, delfiles):
@@ -483,4 +485,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     #logging.basicConfig(filename='server.log',level=logging.DEBUG)
     logging.info("Starting server")
-    app.run(debug = True)
+    app.run(debug = True, host='0.0.0.0')
