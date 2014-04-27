@@ -15,8 +15,8 @@ import pickle
 
 
 
-HOST = 'http://127.0.0.1:5000/'
-
+#HOST = 'http://172.25.208.188:5000/'
+HOST = 'http://0.0.0.0:5000/'
 WORKING_DIR = ""
 SUID = ""
 PROC_QUEUE = Queue()
@@ -207,8 +207,6 @@ def server_sync():
 
                     os.rename(os.path.join(WORKING_DIR,dir[0].replace(server_dir,"")),os.path.join(WORKING_DIR,dir[1].replace(server_dir,"")))
 
-
-
             elif result[0] == "400":
                 logging.error("***Authentication Failure***")
     elif result[0] == "401":
@@ -341,8 +339,13 @@ def sign_in():
         logging.debug("Making directory " + WORKING_DIR + " for User " + username )
         if os.path.exists(WORKING_DIR):
             logging.debug("Folder already exists!")
+            if(os.path.exists(os.path.join(WORKING_DIR,"shared"))):
+                logging.debug("Shared folder already exists!")
+            else:
+                os.mkdir(os.path.join(WORKING_DIR,"shared"))
         else:
             os.mkdir(WORKING_DIR)
+            os.mkdir(os.path.join(WORKING_DIR,"shared"))
             logging.debug("Folder created!")
 
         DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)
@@ -402,19 +405,21 @@ def admin_change_pass():
         print "ERROR: Username not found! Please try again!"
 
 def user_stat():
-    print "To see stats of user, please input"
-    username = raw_input('Username: ')
-    r = requests.get(HOST+"stat/"+username)
+    #print "To see stats of user, please input"
+    #username = raw_input('Username: ')
+    r = requests.get(HOST+"userstat")
     result = yaml.load(r.text)
 
     if result[0] == "400":
-        logging.debug("Unsucessful retrieval of " + username + " stats")
-        print "Unsuccesful retrieval of " + username + " stats"
+        logging.debug("Unsucessful retrieval of  users stats")
+        print "Unsuccesful retrieval of user stats"
     elif result[0] == "200":
+        logging.debug("Succesfully retrieved users stats")
+        print "Succesfully retrieved users stats"
         print result[1]
     else:
-        logging.debug("Succesfully retrieved " + username + " stats")
-        print "Succesfully retrieved " + username + " stats"
+        logging.debug("Succesfully retrieved users stats")
+        print "Succesfully retrieved users stats"
 
 def synchronize():
     global SYNCRHONIZED

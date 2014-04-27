@@ -15,15 +15,15 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+ALLOWED_EXTENSIONS = set(['.txt', '.pdf', '.png', '.jpg', '.jpeg', '.gif'])
 app.config.update(dict(
     DATABASE='database.db',
     USERS= {}))
 
 #WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
-#WORKING_DIR = '/home/david/WindowsFolder/Documents/GitHub/CS3240Project'
+WORKING_DIR = '/home/david/WindowsFolder/Documents/GitHub/CS3240Project'
 #WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
-WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
+#WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 
 def authenticate(sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -53,6 +53,13 @@ def is_Admin(sessionhash):
     else:
         return False
 
+def allowed_file(filename):
+    pathandname, extens = os.path.splitext(filename)
+    if extens in ALLOWED_EXTENSIONS:
+        return True
+    else:
+        return False
+
 @app.route('/signup/<username>/<passhash>')
 def signup(username, passhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -65,6 +72,7 @@ def signup(username, passhash):
             logging.debug("No user named : " + username + " found... Creating...")
             cur.execute("INSERT INTO users (username, passhash, user_role) VALUES (?, ?, ?)", (username, passhash, 0))
             mkdir(username)
+            mkdir(os.path.join(username,"shared"))
             snapshot = pickle.dumps(dirsnapshot.DirectorySnapshot(os.path.join(WORKING_DIR,'filestore',username)))
 
             date = str(datetime.now())
@@ -72,6 +80,7 @@ def signup(username, passhash):
             cur.execute("INSERT INTO snaps (username, time_stamp, snapshot) VALUES (?, ?, ?)", (username,date, snapshot))
 
             return json.dumps(("200", date))
+
         else:
             logging.debug("User named : " + username + " found. Aborting Signup")
             return json.dumps(("404", "BAD"))
@@ -218,6 +227,10 @@ def upload_file(sessionhash,filename):
         user = authenticate(sessionhash)
         logging.debug("User : " + user[1] + "New File : " + filename + " .... Processing")
 
+        if not(allowed_file(filename)):
+            logging.debug("Invalid File Type error encountered on " + filename)
+            return json.dumps(("400"), "BAD")
+
         if (user[0]):
             file = request.files['file']
             userpath = os.path.join(WORKING_DIR,"filestore",user[1])
@@ -281,6 +294,8 @@ def delete_dir(sessionhash,filepath):
         return json.dumps(("400"), "BAD")
 
 
+
+
 @app.route('/download-file/<sessionhash>/<path:filepath>')
 def download_file(sessionhash, filepath):
     user = authenticate(sessionhash)
@@ -288,9 +303,21 @@ def download_file(sessionhash, filepath):
 
     if (user[0]):
         # print os.path.join("filestore", user[1], filepath)
-        return send_file(os.path.join(WORKING_DIR, "filestore", user[1], filepath))
+        return send_file(os.path.join(WORKING_DIR, "filestore", user[1], filepath),as_attachment=True)
     else:
         logging.error("User named : " + user[1] + " Was not Authenticated")
+        return json.dumps(("400"), "BAD")
+
+@app.route('/download-link/<username>/<path:filepath>')
+def download_link(username, filepath):
+    #print os.path.join(WORKING_DIR, "filestore" , username, "shared", filepath)
+
+    if (os.path.exists(os.path.join(WORKING_DIR, "filestore" , username, "shared", filepath))):
+        # print os.path.join("filestore", user[1], filepath)
+        return send_file(os.path.join(WORKING_DIR, "filestore" , username, "shared", filepath), as_attachment=True)
+    else:
+        logging.error("Path to file was invalid")
+        logging.error(os.path.join(WORKING_DIR, "filestore", filepath))
         return json.dumps(("400"), "BAD")
 
 @app.route('/is-dir/<sessionhash>/<path:filepath>')
@@ -334,7 +361,6 @@ def recursealldir(path, filename):
     return newstr
                 #return subdirectory to add to files
 
-
 @app.route('/stat/<username>')
 def stat(username):
 
@@ -372,17 +398,18 @@ def userstat():
             unistr = uniresults[0]
             user_list.append(unistr.encode('ascii','ignore'))
         for s in user_list:
-            full_filename = os.path.join(WORKING_DIR, "filestore", s)
-            string = recursealldir(os.path.join(WORKING_DIR, "filestore"), s)
-            foldercount = string.count("{")-1
-            filescount = string.count(":") - foldercount
-            totalsize = os.path.getsize(full_filename)
-            result = "Username: " +s + " [ Folder count: " + str(foldercount) \
-                   + " , File count: " + str(filescount) + ", Total size: "+ str(totalsize) + "]"
-            print result
-            stat_list.append(result)
+            if ( s != "admin"):
+                full_filename = os.path.join(WORKING_DIR, "filestore", s)
+                string = recursealldir(os.path.join(WORKING_DIR, "filestore"), s)
+                foldercount = string.count("{")-1
+                filescount = string.count(":") - foldercount
+                totalsize = os.path.getsize(full_filename)
+                result = "Username: " +s + " [ Folder count: " + str(foldercount) \
+                       + " , File count: " + str(filescount) + ", Total size: "+ str(totalsize) + "]"
+                print result
+                stat_list.append(result)
 
-    return json.dumps(("400",stat_list))
+    return json.dumps(("200",stat_list))
 
 @app.route('/remove_user/<username>/<delfiles>')
 def remove_user(username, delfiles):

@@ -6,22 +6,30 @@ We're demoing at 3:50 on the 30th, but at least two of us need to be there 15 mi
 
 PROBLEMS:
 -Move out doesn't trigger an event (an ongoing watchdog issue)
--Rename doesn't trigger an event
--DOWNLOAD isn't working perfectly, occasionally 404s, 
+-Moving a directory in doesn't trigger an event
+-Sync kind of works, kind of doesn't. More testing to come
 
 NEED TWO "EXTRA" STORIES:
--Download Links(could also have a "shared" folder)
--Saved Client Login, could add list
--Allow/Disallow extensions
+-Saved Client Login works, could add list
+-Our sessions/ hashing passwords/ authenticating users might count as well
+-Done with download links, of form download-link/<username>/<file in shared folder>
+-Done with allow/disallow extensions. Only checks on upload, but that should be enough. Simply disallows upload of any file that isn't a valid one.
 Can add more if time permits
-Our sessions/ hasing passwords/ authenticating users might count as well
-
-POLISH:
--Log needs to be more user friendly in the console, the actual file can still be detailed
 
 TEST:
 Fresh "install"
+	-Change WORKING_DIR
+	-Create the database
+	-Run the server/client scripts
+
 Access across network
+	-Test adding a file and downloading it to another machine: PASS
+	-Test deleting and deleting it on another machine: Need to retest
+	-Test turning autosync off, making changes, then turning it on again: 
+	-Test creating a directory and having it create on the other machine: New folder gets seen and created, but the rename bug duplicates it
+	-Test deleting a directory and having it delete on the other machine: Need to retest
+	-Test renaming files/directories across machines: Rename creates a new files on the other machine
+
 We should probably do one "full" test with the final code we plan on submitting, which will include:
 	Testing the user functions(create account, sign in, change pass, toggle sync)
 	Testing the background for the user(add, remove, move in, move out, rename, new directory)
@@ -30,4 +38,3 @@ We should probably do one "full" test with the final code we plan on submitting,
 	Test additional stories, whatever they may be
 
 QUESTIONS:
-Should we handle WORKING_DIR in server differently?
