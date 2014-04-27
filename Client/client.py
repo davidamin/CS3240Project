@@ -15,8 +15,8 @@ import pickle
 
 
 
-#HOST = 'http://172.25.208.188:5000/'
-HOST = 'http://0.0.0.0:5000/'
+HOST = 'http://172.25.208.188:5000/'
+#HOST = 'http://0.0.0.0:5000/'
 WORKING_DIR = ""
 SUID = ""
 PROC_QUEUE = Queue()
@@ -198,8 +198,9 @@ def server_sync():
 
                 for file in snap_diff.files_modified:
                     logging.debug("File: " + file + " has been modified remotely.")
-
-                    os.remove(os.path.join(WORKING_DIR,file.replace(server_dir,"")))
+                    temp = file.replace(server_dir,WORKING_DIR)
+                    print temp
+                    os.remove(temp)
                     PROC_QUEUE.put(("Download", file.replace(server_dir,WORKING_DIR)))
 
                 for file in snap_diff.files_moved:
