@@ -85,7 +85,7 @@ def job_processor(name, stop_event):
 
                 DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)
                 file_write = file("./client_SAVEFILE", 'w')
-                yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT),file_write)
+                yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT,HOST),file_write)
                 #send = pickle.dumps(DIR_SNAPSHOT)
                 # Change this line.. Once it's correct.
                 r = requests.get(HOST + "snapshot/" + SUID)
@@ -96,9 +96,10 @@ def job_processor(name, stop_event):
                 elif result[0] == "400":
                     logging.error("***Authentication Failure***")
         else:
-            server_sync()
-            local_sync()
-            stop_event.wait(2)
+            if SYNCRHONIZED == True:
+                server_sync()
+                local_sync()
+                stop_event.wait(2)
 
         # stop_event.wait(1)
 
@@ -177,7 +178,7 @@ def server_sync():
 
                 DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)
                 file_write = file("./client_SAVEFILE", 'w')
-                yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT),file_write)
+                yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT,HOST),file_write)
 
             elif result[0] == "400":
                 logging.error("***Authentication Failure***")
@@ -275,7 +276,7 @@ def sign_in():
 
         DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)
         file_write = file("./client_SAVEFILE", 'w')
-        yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT),file_write)
+        yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT,HOST),file_write)
 
         runtime()
     elif result[0] == "200" and username == "admin":
@@ -455,11 +456,13 @@ def init():
         global SUID
         global TIME_STAMP
         global DIR_SNAPSHOT
+        global HOST
         result = yaml.load(file('./client_SAVEFILE', 'r'))
         WORKING_DIR = result[0]
         SUID = result[1]
         TIME_STAMP = result[2]
         DIR_SNAPSHOT = result[3]
+        HOST = result[4]
         runtime()
 
     else:
