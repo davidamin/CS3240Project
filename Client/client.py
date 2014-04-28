@@ -15,7 +15,7 @@ import pickle
 
 
 
-HOST = 'http://172.25.208.188:5000/'
+HOST = 'http://172.25.109.54:5000/'
 #HOST = 'http://0.0.0.0:5000/'
 WORKING_DIR = ""
 SUID = ""
@@ -188,8 +188,15 @@ def server_sync():
 
                 for file2 in snap_diff.files_created:
                     logging.debug("File: " + file2 + " has been created remotely.")
-
-                    PROC_QUEUE.put(("Download", file2.replace(server_dir,WORKING_DIR)))
+                    filename = secure_filepass(file2.replace(server_dir,WORKING_DIR))
+                    logging.debug("Starting download")
+                    r = urllib2.urlopen(HOST + "download-file/" + SUID + filename)
+                    print "hello"
+                    print os.path.join(WORKING_DIR, filename)
+                    with open(os.path.join(WORKING_DIR, filename),'wb') as f:
+                        #print "hello"
+                        f.write(r.read())
+                    #PROC_QUEUE.put(("Download", file2.replace(server_dir,WORKING_DIR)))
 
                 for file2 in snap_diff.files_deleted:
                     logging.debug("File: " + file2 + " has been deleted remotely.")
@@ -200,7 +207,15 @@ def server_sync():
                     logging.debug("File: " + file2 + " has been modified remotely.")
                     #temp = file.replace(server_dir,WORKING_DIR)
                     os.remove(file2.replace(server_dir,WORKING_DIR))
-                    PROC_QUEUE.put(("Download", file2.replace(server_dir,WORKING_DIR)))
+                    filename = secure_filepass(file2.replace(server_dir,WORKING_DIR))
+                    logging.debug("Starting download")
+                    r = urllib2.urlopen(HOST + "download-file/" + SUID + filename)
+                    print "hello"
+                    print os.path.join(WORKING_DIR, filename)
+                    with open(os.path.join(WORKING_DIR, filename),'wb') as f:
+                        #print "hello"
+                        f.write(r.read())
+                    #.put(("Download", file2.replace(server_dir,WORKING_DIR)))
 
                 for file2 in snap_diff.files_moved:
                     logging.debug("File: " + file2[0] + " has been RENAMED remotely.")
