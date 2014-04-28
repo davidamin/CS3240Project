@@ -118,7 +118,7 @@ def changepass(username, passhash, sessionhash):
         if(is_Admin(sessionhash)):
             cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, username))
             print "ADMIN CHANGING PASSWORD FOR USER " + username
-            return json.dumps(("200"))
+            return json.dumps(("200",))
         authres = authenticate(sessionhash)
 
         if(authres[0]):
@@ -127,7 +127,7 @@ def changepass(username, passhash, sessionhash):
             if(username == curuser):
                 cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, curuser))
                 logging.debug("User named : " + username + " found.")
-                return json.dumps(("200"))
+                return json.dumps(("200",))
             else:
                 logging.debug("User tried to change someone else's password")
                 return json.dumps(("404","BAD"))
