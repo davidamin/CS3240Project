@@ -466,6 +466,12 @@ def init():
         runtime()
 
     else:
+        global HOST
+
+        print "Enter URL of Server: "
+        print "Example: http://172.25.109.54:5000/"
+        HOST = raw_input("URL: ")
+        print HOST
         print "Welcome to OneDir! Please Select from the following options!"
         print "0 : Create New Account!"
         print "1 : Sign into Account!"
@@ -483,8 +489,5 @@ if __name__ == '__main__':
     #logging.basicConfig(filename='Client_Log.log',level=logging.DEBUG)
     # logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
-    print "Enter URL of Server: "
-    print "Example: http://172.25.109.54:5000/"
-    global HOST
-    HOST = raw_input("URL: ")
+
     init()

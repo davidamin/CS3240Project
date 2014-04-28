@@ -188,7 +188,7 @@ def get_snapshot(sessionhash):
 
                 diff = dirsnapshot.DirectorySnapshotDiff(ref_snapshot,serv_snapshot)
                 logging.info("User :  " + user[1] + " Downloaded Snapshot")
-                return json.dumps(("200", WORKING_DIR, pickle.dumps(diff), res[1]))
+                return json.dumps(("200", os.path.join(WORKING_DIR,'filestore',user[1]), pickle.dumps(diff), res[1]))
         else:
             logging.error("User named : " + user[1] + " Was not Authenticated")
             return json.dumps(("400", "BAD"))
