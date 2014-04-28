@@ -7,11 +7,7 @@ import uuid
 import shutil
 import pickle
 from watchdog.utils import dirsnapshot
-
-#import server_functions
-import time
 from datetime import datetime
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
@@ -441,38 +437,6 @@ def get_file_data(filename):
         ret_value = { "result" : 0, "size" : file_size, "value" : snippet}
     return json.dumps(ret_value)
 
-
-# # Invoked when you access: http://127.0.0.1:5000/replace-file-data/newdata.txt/data   (makes changes to file:newdata.txt by putting info in data
-# @app.route('/replace-file-data/<filename>/<data>')
-# def replace_data( filename, data):
-#     full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
-#     logging.debug("Replacing file data")
-#     with open( full_filename, "w") as f:
-#         f.write(data)
-#     return "server wrote data to: " + filename
-#
-#
-# #Invoked when you access: http://127.0.0.1:5000/append-data-file/newdata.txt/data  to append data into existing files
-# @app.route('/append-data-file/<filename>/<data>')
-# def append_file( filename, data):
-#     full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
-#     with open( full_filename, "a") as f:
-#         f.write(data)
-#     return "server appended data to: " + filename
-
-#Invoked when you access: http://127.0.0.1:5000/delete-file/newdata.txt to delete newdata.txt file
-# only allows deletion of file but not directories
-
-
-# #Invoked when you access: http://127.0.0.1:5000/delete-file/newdata.txt to delete newdata.txt file
-# @app.route('/rename-file/<filename>/<newfilename>')
-# def rename_file( filename , newfilename):
-#     full_filename = os.path.join(WORKING_DIR, 'filestore', filename)
-#     new_filename = os.path.join(WORKING_DIR, 'filestore', newfilename)
-#     os.rename(full_filename, new_filename)
-#
-#     return "file renamed: " + filename +" to " + newfilename
-
 @app.route('/view_report')
 def view_report():
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -484,20 +448,6 @@ def view_report():
         for uniresults in results:
             unistr = uniresults[0]
             user_list.append(unistr.encode('ascii','ignore'))
-        #f = open('AdminReport', 'w')
-        #json.dump(results,f)
-    # result_html = '''
-    # <!doctype html>
-    # <title>Users</title>
-    # <h1>User List</h1>
-    # <body>
-    # '''
-    # for formatted_result in user_list:
-    #     result_html += formatted_result
-    #     result_html += "<br>"
-    #
-    # result_html += "</body>"
-    # return result_html
     return json.dumps(("200", user_list))
 
 @app.route('/view_log')

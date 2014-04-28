@@ -9,14 +9,13 @@ import os
 import time
 import urllib2
 from Queue import *
-from threading import Thread, Lock
+from threading import Thread
 import threading
 import pickle
 
 
 
 HOST = 'http://172.25.109.54:5000/'
-#HOST = 'http://0.0.0.0:5000/'
 WORKING_DIR = ""
 SUID = ""
 PROC_QUEUE = Queue()
@@ -26,7 +25,6 @@ SYNCRHONIZED = True
 
 
 def job_processor(name, stop_event):
-    #global SYNCRHONIZED
     SAVE = False
     while (1):
         if stop_event.is_set():
@@ -125,39 +123,6 @@ def server_sync():
             result = yaml.load(r.text)
 
             if result[0] == "200":
-                # server_snap = pickle.loads(result[1])
-                # paths_given = []
-                # ONCE = False
-                # ROOT = ""
-                # for path in server_snap.paths:
-                #     # print path
-                #     paths_given.append(path)
-                # paths = sorted(paths_given)
-                # for path in paths:
-                #     if ONCE:
-                #         path = path.replace(ROOT, WORKING_DIR)
-                #         if os.path.exists(path) == False:
-                #             # print path
-                #             logging.debug("Checking if " + path + " is a directory...")
-                #             r = requests.get(HOST + "is-dir/" + SUID + secure_filepass(path))
-                #             result = yaml.load(r.text)
-                #             if result[0] == "200":
-                #                 if result[1]:
-                #                     logging.debug("Directory")
-                #                     os.makedirs(path)
-                #                 else:
-                #                     logging.debug("File")
-                #                     PROC_QUEUE.put(("Download", path))
-                #             elif result[0] == "400":
-                #                 logging.error("***Authentication Failure***")
-                #         else:
-                #             logging.debug("File or Directory Exists... Assigning Timestamp")
-                #             TIME_STAMP = temp_TIME_STAMP
-                #
-                #     else:
-                #         ONCE = True
-                #         ROOT = path
-                #         print "ROOT: " + ROOT
 
                 server_dir = result[1]
                 snap_diff = pickle.loads(result[2])
@@ -192,23 +157,16 @@ def server_sync():
                     filename = file2.replace(server_dir,WORKING_DIR)
                     logging.debug("Starting download")
                     r = urllib2.urlopen(HOST + "download-file/" + SUID + secure_filepass(filename))
-                    print "hello"
-                    print filename
                     with open(filename, 'wb') as f:
                         #print "hello"
                         f.write(r.read())
 
-
-
                 for file2 in snap_diff.files_modified:
                     logging.debug("File: " + file2 + " has been modified remotely.")
-                    #temp = file.replace(server_dir,WORKING_DIR)
                     filename = file2.replace(server_dir,WORKING_DIR)
                     os.remove(filename)
                     logging.debug("Starting download")
                     r = urllib2.urlopen(HOST + "download-file/" + SUID + secure_filepass(filename))
-                    print "hello"
-                    print filename
                     with open(filename, 'wb') as f:
                         f.write(r.read())
 
@@ -278,53 +236,6 @@ def local_sync():
         PROC_QUEUE.put(("Upload", file[1]))
 
 
-
-#class OneDirFileHandles(FileSystemEventHandler):
-
-    # def on_created(self, event):
-    #     # if event.is_directory:
-    #     #     logging.debug("Directory: " + event.src_path + " has been created locally.")
-    #     #
-    #     #     PROC_QUEUE.put(("New Dir", event.src_path))
-    #     # else:
-    #     #     logging.debug("File: " + event.src_path + " has been created locally.")
-    #     #
-    #     #     PROC_QUEUE.put(("Upload", event.src_path))
-    #
-    # def on_modified(self, event):
-    #     if event.is_directory:
-    #         logging.debug("Directory: " + event.src_path + " has been modified locally.")
-    #
-    #         PROC_QUEUE.put(("Remove Dir", event.src_path))
-    #         PROC_QUEUE.put(("New Dir", event.src_path))
-    #     else:
-    #         logging.debug("File: " + event.src_path + " has been modified locally.")
-    #
-    #         PROC_QUEUE.put(("Delete", event.src_path))
-    #         PROC_QUEUE.put(("Upload", event.src_path))
-    #
-    # def on_moved(self,event):
-    #     if event.is_directory:
-    #         logging.debug("Directory: " + event.src_path + " has been modified locally.")
-    #
-    #         PROC_QUEUE.put(("Remove Dir", event.src_path))
-    #         PROC_QUEUE.put(("New Dir", event.dest_path))
-    #     else:
-    #         logging.debug("File: " + event.src_path + " has been modified locally.")
-    #
-    #         PROC_QUEUE.put(("Delete", event.src_path))
-    #         PROC_QUEUE.put(("Upload", event.dest_path))
-    #
-    # def on_deleted(self, event):
-    #     if event.is_directory:
-    #         logging.debug("Directory: " + event.src_path + " has been deleted locally.")
-    #
-    #         PROC_QUEUE.put(("Remove Dir", event.src_path))
-    #     else:
-    #         logging.debug("File: " + event.src_path + " has been deleted locally.")
-    #
-    #         PROC_QUEUE.put(("Delete", event.src_path))
-
 def new_user():
     print "Creating new account. Please fill out the following details:"
     username = raw_input('Username: ')
@@ -378,7 +289,6 @@ def sign_in():
         print "ERROR: Username was not found! Please try again!"
         init()
 
-#somehow need to give the users and admins the option to do this after sign in
 def change_pass():
     print "To change password, please input"
     username = raw_input('Username: ')
@@ -419,8 +329,6 @@ def admin_change_pass():
         print "ERROR: Username not found! Please try again!"
 
 def user_stat():
-    #print "To see stats of user, please input"
-    #username = raw_input('Username: ')
     r = requests.get(HOST+"userstat")
     result = yaml.load(r.text)
 
@@ -524,7 +432,6 @@ def runtime():
     observer = Observer()
     #print WORKING_DIR
 
-    #the recursive variable here determines whether the program watches subdirectories
     observer.schedule(event_handler, WORKING_DIR, recursive=True)
     observer.start()
     stop = threading.Event()
