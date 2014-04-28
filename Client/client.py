@@ -163,15 +163,17 @@ def server_sync():
                 snap_diff = pickle.loads(result[2])
                 TIME_STAMP = result[3]
 
-                for dir in snap_diff.dirs_created:
-                    logging.debug("Directory: " + dir.replace(server_dir,"") + " has been created remotely.")
-
-                    os.mkdir(dir.replace(server_dir,WORKING_DIR))
-
                 for dir in snap_diff.dirs_deleted:
                     logging.debug("Directory: " + dir + " has been deleted remotely.")
+                    if (os.path.exists(dir.replace(server_dir,WORKING_DIR))):
+                        os.removedirs(dir.replace(server_dir,WORKING_DIR))
 
-                    os.removedirs(dir.replace(server_dir,WORKING_DIR))
+                for dir in snap_diff.dirs_created:
+                    logging.debug("Directory: " + dir.replace(server_dir,"") + " has been created remotely.")
+                    if (not os.path.exists(dir.replace(server_dir,WORKING_DIR))):
+                        os.mkdir(dir.replace(server_dir,WORKING_DIR))
+
+
 
                 for dir in snap_diff.dirs_modified:
                     logging.debug("Directory: " + dir + " has been modified remotely.")
@@ -181,6 +183,10 @@ def server_sync():
 
                     os.rename(dir[0].replace(server_dir,WORKING_DIR),dir[1].replace(server_dir,WORKING_DIR))
 
+                for file2 in snap_diff.files_deleted:
+                    logging.debug("File: " + file2 + " has been deleted remotely.")
+
+                    os.remove(file2.replace(server_dir,WORKING_DIR))
                 for file2 in snap_diff.files_created:
                     logging.debug("File: " + file2 + " has been created remotely.")
                     filename = file2.replace(server_dir,WORKING_DIR)
@@ -192,10 +198,7 @@ def server_sync():
                         #print "hello"
                         f.write(r.read())
 
-                for file2 in snap_diff.files_deleted:
-                    logging.debug("File: " + file2 + " has been deleted remotely.")
 
-                    os.remove(file2.replace(server_dir,WORKING_DIR))
 
                 for file2 in snap_diff.files_modified:
                     logging.debug("File: " + file2 + " has been modified remotely.")
