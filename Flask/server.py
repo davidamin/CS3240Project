@@ -336,30 +336,45 @@ def is_dir(sessionhash, filepath):
 
 
 def recursealldir(path, filename):
-    in_filename = os.path.join(path,filename.__str__())
-    directory = {}
-    # if has more than 1 link then it must be a dir
-    if (os.stat(in_filename).st_nlink) < 2:
-        directory[filename.__str__()] = os.path.getsize(in_filename)
-        return directory.__str__()
-    else :
-        subdirectory ={}
-        #this means that there are more than one file in path so we go through each
-        for infile in os.listdir(in_filename):
-            in_filename2 = os.path.join(in_filename,infile.__str__())
-            #recursively checks if inside is also a dir
-            #not another path
-            if ((os.stat(in_filename2).st_nlink) < 2):
-                #base case:not a directory so add normal to subdirectory
-                subdirectory[infile.__str__()] = os.path.getsize(in_filename2)
+    # in_filename = os.path.join(path,filename.__str__())
+    # directory = {}
+    # print in_filename
+    # # if has more than 1 link then it must be a dir
+    # print os.stat(in_filename).st_nlink
+    # if not os.path.isdir(in_filename):
+    #     directory[filename.__str__()] = os.path.getsize(in_filename)
+    #     print "NO NEWSTR"
+    #     return directory.__str__()
+    # else :
+    #     subdirectory ={}
+    #     #this means that there are more than one file in path so we go through each
+    #     for infile in os.listdir(in_filename):
+    #         in_filename2 = os.path.join(in_filename,infile.__str__())
+    #         #recursively checks if inside is also a dir
+    #         #not another path
+    #         if ((os.stat(in_filename2).st_nlink) < 2):
+    #             #base case:not a directory so add normal to subdirectory
+    #             subdirectory[infile.__str__()] = os.path.getsize(in_filename2)
+    #
+    #         else:
+    #             #it is a directory so makes another dictonary for it
+    #             subdirectory[infile.__str__()] = recursealldir(in_filename,infile.__str__())
+    #     oldstr = subdirectory.__str__()
+    #     newstr = oldstr.replace("\\", "")
+    # print "NEWSTR: " + newstr
+    # return newstr
 
-            else:
-                #it is a directory so makes another dictonary for it
-                subdirectory[infile.__str__()] = recursealldir(in_filename,infile.__str__())
-        oldstr = subdirectory.__str__()
-        newstr = oldstr.replace("\\", "")
+    top = os.path.join(path, filename)
+    size = 0
+    dir_size = 0
+    file_size = 0
 
-    return newstr
+    for root, dirs, files in os.walk(top):
+        size += sum([os.path.getsize(os.path.join(root, name)) for name in files])
+        dir_size += len(dirs)
+        file_size += len(files)
+
+    return (size, dir_size, file_size)
                 #return subdirectory to add to files
 
 @app.route('/stat/<username>')
@@ -377,10 +392,10 @@ def stat(username):
         else:
             # files = {}
             full_filename = os.path.join(WORKING_DIR, "filestore", username)
-            string = recursealldir(os.path.join(WORKING_DIR, "filestore"), username)
-            foldercount = string.count("{")-1
-            filescount = string.count(":") - foldercount
-            totalsize = os.path.getsize(full_filename)
+            ans = recursealldir(os.path.join(WORKING_DIR, "filestore"), username)
+            foldercount = ans[1]
+            filescount = ans[2]
+            totalsize = ans[0]
             result = "User: " +username + " [ Folder count: " + str(foldercount) \
                    + " , File count:" + str(filescount) + ", Total size: "+ str(totalsize) + "]"
 
@@ -401,10 +416,10 @@ def userstat():
         for s in user_list:
             if ( s != "admin"):
                 full_filename = os.path.join(WORKING_DIR, "filestore", s)
-                string = recursealldir(os.path.join(WORKING_DIR, "filestore"), s)
-                foldercount = string.count("{")-1
-                filescount = string.count(":") - foldercount
-                totalsize = os.path.getsize(full_filename)
+                ans = recursealldir(os.path.join(WORKING_DIR, "filestore"), s)
+                foldercount = ans[1]
+                filescount = ans[2]
+                totalsize = ans[0]
                 result = "Username: " +s + " [ Folder count: " + str(foldercount) \
                        + " , File count: " + str(filescount) + ", Total size: "+ str(totalsize) + "]"
                 print result
