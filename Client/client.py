@@ -15,7 +15,7 @@ import pickle
 
 
 
-HOST = 'http://172.25.208.188:5000/'
+HOST = 'http://172.25.109.54:5000/'
 #HOST = 'http://0.0.0.0:5000/'
 WORKING_DIR = ""
 SUID = ""
@@ -71,13 +71,7 @@ def job_processor(name, stop_event):
                             logging.error("***Authentication Failure***")
                     elif job[0] == "Download":
                         SAVE = False
-                        logging.debug("Starting download")
-                        r = urllib2.urlopen(HOST + "download-file/" + SUID + secure_filepass(job[1]))
-                        print "hello"
-                        print os.path.join(WORKING_DIR, job[1])
-                        with open(os.path.join(WORKING_DIR, job[1]), 'wb') as f:
-                            #print "hello"
-                            f.write(r.read())
+
 
                     PROC_QUEUE.task_done()
 
@@ -115,6 +109,7 @@ def secure_filepass(filename):
 
 def server_sync():
     global TIME_STAMP
+    global DIR_SNAPSHOT
     temp_TIME_STAMP = ""
     r = requests.get(HOST + "timestamp/" + SUID)
     result = yaml.load(r.text)
@@ -189,7 +184,14 @@ def server_sync():
                 for file2 in snap_diff.files_created:
                     logging.debug("File: " + file2 + " has been created remotely.")
 
-                    PROC_QUEUE.put(("Download", file2.replace(server_dir,WORKING_DIR)))
+                    filename = file2.replace(server_dir,WORKING_DIR)
+                    logging.debug("Starting download")
+                    r = urllib2.urlopen(HOST + "download-file/" + SUID + secure_filepass(filename))
+                    print "hello"
+                    print filename
+                    with open(filename, 'wb') as f:
+                        #print "hello"
+                        f.write(r.read())
 
                 for file2 in snap_diff.files_deleted:
                     logging.debug("File: " + file2 + " has been deleted remotely.")
@@ -199,8 +201,14 @@ def server_sync():
                 for file2 in snap_diff.files_modified:
                     logging.debug("File: " + file2 + " has been modified remotely.")
                     #temp = file.replace(server_dir,WORKING_DIR)
-                    os.remove(file2.replace(server_dir,WORKING_DIR))
-                    PROC_QUEUE.put(("Download", file2.replace(server_dir,WORKING_DIR)))
+                    filename = file2.replace(server_dir,WORKING_DIR)
+                    os.remove(filename)
+                    logging.debug("Starting download")
+                    r = urllib2.urlopen(HOST + "download-file/" + SUID + secure_filepass(filename))
+                    print "hello"
+                    print filename
+                    with open(filename, 'wb') as f:
+                        f.write(r.read())
 
                 for file2 in snap_diff.files_moved:
                     logging.debug("File: " + file2[0] + " has been RENAMED remotely.")
