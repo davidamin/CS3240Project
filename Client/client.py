@@ -205,8 +205,8 @@ def local_sync():
     for dir in diff.dirs_modified:
         logging.debug("Directory: " + dir + " has been modified locally.")
 
-        PROC_QUEUE.put(("Remove Dir", dir))
-        PROC_QUEUE.put(("New Dir", dir))
+        #PROC_QUEUE.put(("Remove Dir", dir))
+        #PROC_QUEUE.put(("New Dir", dir))
 
     for dir in diff.dirs_moved:
         logging.debug("Directory: " + dir[0] + " has been RENAMED locally.")

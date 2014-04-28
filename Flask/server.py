@@ -432,12 +432,12 @@ def remove_user(username, delfiles):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
     with db_connect:
         cur = db_connect.cursor()
-        cur.execute("DELETE FROM users WHERE username = ?", (username))
+        cur.execute("DELETE FROM users WHERE username = ?", (username,))
         if(delfiles):
             userpath = os.path.join(WORKING_DIR,"filestore",username)
             if os.path.exists(userpath):
                 logging.debug("File: " + userpath + " Exists... Deleting")
-                os.removedirs(userpath)
+                shutil.rmtree(userpath)
             else:
                 logging.debug("Dir: " + userpath + " Does not Exist.... Nothing to Delete")
         return json.dumps(("200","User" + username + " removed."))
