@@ -479,4 +479,9 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     #logging.basicConfig(filename='Client_Log.log',level=logging.DEBUG)
     # logging.basicConfig(filename='example.log',level=logging.DEBUG)
+
+    print "Enter URL of Server: "
+    print "Example: http://172.25.109.54:5000/"
+    global HOST
+    HOST = raw_input("URL: ")
     init()

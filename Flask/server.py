@@ -17,7 +17,7 @@ app.config.update(dict(
     USERS= {}))
 
 #WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
-WORKING_DIR = '/home/david/WindowsFolder/Documents/GitHub/CS3240Project'
+#WORKING_DIR = '/home/david/WindowsFolder/Documents/GitHub/CS3240Project'
 #WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
 #WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 
@@ -462,4 +462,9 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     #logging.basicConfig(filename='server.log',level=logging.DEBUG)
     logging.info("Starting server")
+    print "Enter Base of Server Folder: (Should be the Flask Folder): "
+    print "Example: /Users/brian/Public/CS3240Project/Flask"
+    global WORKING_DIR
+    WORKING_DIR = raw_input("Absolute Folder Path: ")
+    print WORKING_DIR
     app.run(debug = True, host='0.0.0.0')
