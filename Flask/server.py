@@ -56,7 +56,7 @@ def is_Admin(sessionhash):
 
 def allowed_file(filename):
     pathandname, extens = os.path.splitext(filename)
-    if extens in ALLOWED_EXTENSIONS:
+    if extens in ALLOWED_EXTENSIONS or len(extens) == 0:
         return True
     else:
         return False
