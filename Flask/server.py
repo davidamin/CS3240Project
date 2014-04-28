@@ -21,10 +21,9 @@ app.config.update(dict(
     USERS= {}))
 
 #WORKING_DIR = '/Users/User/Documents/Github/CS3240Project'
-#WORKING_DIR = '/home/david/WindowsFolder/Documents/GitHub/CS3240Project'
+WORKING_DIR = '/home/david/WindowsFolder/Documents/GitHub/CS3240Project'
 #WORKING_DIR = '/Users/Marbo/PycharmProjects/CS3240Project/Flask'
-WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
-
+#WORKING_DIR = '/Users/brian/Public/CS3240Project/Flask'
 
 def authenticate(sessionhash):
     db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
@@ -181,7 +180,6 @@ def get_snapshot(sessionhash):
         if (user[0]):
             db_connect = sqlite3.connect(WORKING_DIR + "/database.db")
             timestamp = request.data
-            print "THIS IS REQUESTED TIMESTAMP: " + timestamp
             with db_connect:
                 cur = db_connect.cursor()
                 if timestamp == "new":
@@ -190,14 +188,11 @@ def get_snapshot(sessionhash):
                     cur.execute("SELECT snapshot, time_stamp FROM snaps WHERE username = ? AND time_stamp = ?", (user[1],timestamp))
                 res = cur.fetchone()
                 ref_snapshot = pickle.loads(res[0])
-                cur.execute("SELECT snapshot, time_stamp FROM snaps WHERE username = ? ORDER BY time_stamp DESC", (user[1],))
-                res = cur.fetchone()
-                serv_snapshot = pickle.loads(res[0])
-                print "THIS IS NEWEST: " + res[1]
+                serv_snapshot = dirsnapshot.DirectorySnapshot(os.path.join(WORKING_DIR, 'filestore',user[1]),recursive=True)
 
                 diff = dirsnapshot.DirectorySnapshotDiff(ref_snapshot,serv_snapshot)
                 logging.info("User :  " + user[1] + " Downloaded Snapshot")
-                return json.dumps(("200", os.path.join(WORKING_DIR, 'filestore',user[1]), pickle.dumps(diff), res[1]))
+                return json.dumps(("200", WORKING_DIR, pickle.dumps(diff), res[1]))
         else:
             logging.error("User named : " + user[1] + " Was not Authenticated")
             return json.dumps(("400", "BAD"))
@@ -212,14 +207,14 @@ def timestamp(sessionhash):
             cur = db_connect.cursor()
             cur.execute("SELECT time_stamp FROM snaps WHERE username = ? ORDER BY time_stamp DESC", (user[1],))
 
-            ret = cur.fetchone()
+            ret = cur.fetchall()
             if len(ret) == 0:
                 logging.info("User: " + user[1] + " Does not have a Timestamp")
                 return json.dumps(("401", "NONE"))
             else:
-                # res = ret.pop()
-                logging.info("User :  " + user[1] + " Accessed Timestamp " + ret[0])
-                return json.dumps(("200", ret[0]))
+                res = ret.pop()
+                logging.info("User :  " + user[1] + " Accessed Timestamp ")
+                return json.dumps(("200", res[0]))
     else:
         logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400", "BAD"))

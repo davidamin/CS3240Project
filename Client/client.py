@@ -15,8 +15,8 @@ import pickle
 
 
 
-HOST = 'http://172.25.208.188:5000/'
-#HOST = 'http://0.0.0.0:5000/'
+#HOST = 'http://172.25.208.188:5000/'
+HOST = 'http://0.0.0.0:5000/'
 WORKING_DIR = ""
 SUID = ""
 PROC_QUEUE = Queue()
@@ -186,30 +186,26 @@ def server_sync():
 
                     os.rename(dir[0].replace(server_dir,WORKING_DIR),dir[1].replace(server_dir,WORKING_DIR))
 
-                for file2 in snap_diff.files_created:
-                    logging.debug("File: " + file2 + " has been created remotely.")
+                for file in snap_diff.files_created:
+                    logging.debug("File: " + file + " has been created remotely.")
 
-                    PROC_QUEUE.put(("Download", file2.replace(server_dir,WORKING_DIR)))
+                    PROC_QUEUE.put(("Download", file.replace(server_dir,WORKING_DIR)))
 
-                for file2 in snap_diff.files_deleted:
-                    logging.debug("File: " + file2 + " has been deleted remotely.")
+                for file in snap_diff.files_deleted:
+                    logging.debug("File: " + file + " has been deleted remotely.")
 
-                    os.remove(file2.replace(server_dir,WORKING_DIR))
+                    os.remove(file.replace(server_dir,WORKING_DIR))
 
-                for file2 in snap_diff.files_modified:
-                    logging.debug("File: " + file2 + " has been modified remotely.")
+                for file in snap_diff.files_modified:
+                    logging.debug("File: " + file + " has been modified remotely.")
                     #temp = file.replace(server_dir,WORKING_DIR)
-                    os.remove(file2.replace(server_dir,WORKING_DIR))
-                    PROC_QUEUE.put(("Download", file2.replace(server_dir,WORKING_DIR)))
+                    os.remove(file.replace(server_dir,WORKING_DIR))
+                    PROC_QUEUE.put(("Download", file.replace(server_dir,WORKING_DIR)))
 
-                for file2 in snap_diff.files_moved:
-                    logging.debug("File: " + file2[0] + " has been RENAMED remotely.")
+                for file in snap_diff.files_moved:
+                    logging.debug("File: " + file[0] + " has been RENAMED remotely.")
 
-                    os.rename(file2[0].replace(server_dir,WORKING_DIR),file2[1].replace(server_dir,WORKING_DIR))
-
-                DIR_SNAPSHOT = dirsnapshot.DirectorySnapshot(WORKING_DIR, recursive=True)
-                file_write = file("./client_SAVEFILE", 'w')
-                yaml.dump((WORKING_DIR,SUID,TIME_STAMP,DIR_SNAPSHOT),file_write)
+                    os.rename(file[0].replace(server_dir,WORKING_DIR),file[1].replace(server_dir,WORKING_DIR))
 
             elif result[0] == "400":
                 logging.error("***Authentication Failure***")
