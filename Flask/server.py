@@ -41,7 +41,7 @@ def is_Admin(sessionhash):
         with db_connect:
             cur = db_connect.cursor()
             cur.execute("SELECT user_role FROM users WHERE username = ?", (valid_sess[1],))
-            results = cur.fetchall()
+            results = cur.fetchone()
             if results[0] == 1:
                 return True
             else:
@@ -117,10 +117,12 @@ def changepass(username, passhash, sessionhash):
         cur = db_connect.cursor()
         if(is_Admin(sessionhash)):
             cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, username))
+            print "ADMIN CHANGING PASSWORD FOR USER " + username
             return json.dumps(("200"))
         authres = authenticate(sessionhash)
 
         if(authres[0]):
+            print authres[1]
             curuser = authres[1]
             if(username == curuser):
                 cur.execute("UPDATE users SET passhash = ? WHERE username = ?", (passhash, curuser))
@@ -462,8 +464,8 @@ def view_log():
     return json.dumps(("200", commandList))
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
-    #logging.basicConfig(filename='server.log',level=logging.DEBUG)
+    #logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(filename='server.log',level=logging.DEBUG)
     logging.info("Starting server")
     print "Enter Base of Server Folder: (Should be the Flask Folder): "
     print "Example: /Users/brian/Public/CS3240Project/Flask"
