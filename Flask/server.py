@@ -203,14 +203,13 @@ def timestamp(sessionhash):
             cur = db_connect.cursor()
             cur.execute("SELECT time_stamp FROM snaps WHERE username = ? ORDER BY time_stamp DESC", (user[1],))
 
-            ret = cur.fetchall()
+            ret = cur.fetchone()
             if len(ret) == 0:
                 logging.info("User: " + user[1] + " Does not have a Timestamp")
                 return json.dumps(("401", "NONE"))
             else:
-                res = ret.pop()
                 logging.info("User :  " + user[1] + " Accessed Timestamp ")
-                return json.dumps(("200", res[0]))
+                return json.dumps(("200", ret[0]))
     else:
         logging.error("User named : " + user[1] + " Was not Authenticated")
         return json.dumps(("400", "BAD"))
