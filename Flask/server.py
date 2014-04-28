@@ -179,16 +179,20 @@ def get_snapshot(sessionhash):
             with db_connect:
                 cur = db_connect.cursor()
                 if timestamp == "new":
-                    cur.execute("SELECT snapshot, time_stamp FROM snaps WHERE username = ? ORDER BY time_stamp ASC", (user[1],))
+                    cur.execute("SELECT snapshot FROM snaps WHERE username = ? ORDER BY time_stamp ASC", (user[1],))
                 else:
-                    cur.execute("SELECT snapshot, time_stamp FROM snaps WHERE username = ? AND time_stamp = ?", (user[1],timestamp))
+                    cur.execute("SELECT snapshot FROM snaps WHERE username = ? AND time_stamp = ?", (user[1],timestamp))
                 res = cur.fetchone()
                 ref_snapshot = pickle.loads(res[0])
+
+                cur.execute("SELECT time_stamp FROM snaps WHERE username = ? ORDER BY time_stamp DESC", (user[1],))
+                res = cur.fetchone()
+
                 serv_snapshot = dirsnapshot.DirectorySnapshot(os.path.join(WORKING_DIR, 'filestore',user[1]),recursive=True)
 
                 diff = dirsnapshot.DirectorySnapshotDiff(ref_snapshot,serv_snapshot)
                 logging.info("User :  " + user[1] + " Downloaded Snapshot")
-                return json.dumps(("200", os.path.join(WORKING_DIR,'filestore',user[1]), pickle.dumps(diff), res[1]))
+                return json.dumps(("200", os.path.join(WORKING_DIR,'filestore',user[1]), pickle.dumps(diff), res[0]))
         else:
             logging.error("User named : " + user[1] + " Was not Authenticated")
             return json.dumps(("400", "BAD"))
