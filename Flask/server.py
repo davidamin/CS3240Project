@@ -433,7 +433,7 @@ def remove_user(username, delfiles):
     with db_connect:
         cur = db_connect.cursor()
         cur.execute("DELETE FROM users WHERE username = ?", (username,))
-        if(delfiles):
+        if(delfiles == 1):
             userpath = os.path.join(WORKING_DIR,"filestore",username)
             if os.path.exists(userpath):
                 logging.debug("File: " + userpath + " Exists... Deleting")
